@@ -1,24 +1,30 @@
-# Compilador TC25 - Proyecto de Técnicas de Compilación
+# 🚀 Compilador TC25 - Proyecto de Técnicas de Compilación  
 
-## Configuración inicial del proyecto
+## 🏗️ Configuración Inicial del Proyecto  
 
-### Creación del proyecto Maven
+### 📦 Creación del Proyecto Maven  
 
-El primer paso para desarrollar nuestro compilador es crear la estructura básica del proyecto usando Maven, que nos ayudará con la gestión de dependencias y el ciclo de vida de construcción.
+El primer paso para desarrollar nuestro **compilador TC25** es crear la estructura básica del proyecto usando **Maven**, que nos ayudará con la gestión de dependencias y el ciclo de vida de construcción.  
 
-Para crear el proyecto, ejecutamos el siguiente comando Maven:
+Ejecutamos el siguiente comando Maven:  
 
 ```bash
-mvn org.apache.maven.plugins:maven-archetype-plugin:3.1.2:generate -DarchetypeArtifactId="maven-archetype-quickstart" -DarchetypeGroupId="org.apache.maven.archetypes" -DarchetypeVersion="1.4" -DgroupId="com.compilador" -DartifactId="demo"
+mvn org.apache.maven.plugins:maven-archetype-plugin:3.1.2:generate \
+    -DarchetypeArtifactId="maven-archetype-quickstart" \
+    -DarchetypeGroupId="org.apache.maven.archetypes" \
+    -DarchetypeVersion="1.4" \
+    -DgroupId="com.compilador" \
+    -DartifactId="demo"
+```
 
-Durante la ejecución del comando, configuramos las siguientes propiedades:
-* **groupId**: com.compilador
-* **artifactId**: demo
-* **version**: 1.0
-* **package**: com.compilador
+🔹 **Configuración durante la ejecución:**  
+- **groupId**: `com.compilador`  
+- **artifactId**: `demo`  
+- **version**: `1.0`  
+- **package**: `com.compilador`  
 
-Esto genera la estructura básica del proyecto:
-
+📂 **Estructura generada del proyecto:**  
+```
 demo/
 ├── pom.xml
 ├── src/
@@ -32,17 +38,20 @@ demo/
 │           └── com/
 │               └── compilador/
 │                   └── AppTest.java
+```
 
-## Configuración de ANTLR para el Análisis Léxico
+---
 
-Después de crear el proyecto básico, necesitamos configurar ANTLR4 para implementar el analizador léxico.
+## 🎭 Configuración de ANTLR para el Análisis Léxico  
 
-### 1. Modificación del pom.xml
+Después de crear el proyecto básico, configuramos **ANTLR4** para implementar el **analizador léxico**.  
 
-Actualizamos el archivo `pom.xml` para incluir la dependencia de ANTLR y los plugins necesarios:
+### ✍️ 1. Modificación del `pom.xml`  
+
+Añadimos la dependencia de **ANTLR** y los plugins necesarios:  
 
 ```xml
-<!-- Añadir en la sección properties -->
+<!-- 📌 Propiedades del proyecto -->
 <properties>
   <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   <maven.compiler.source>1.8</maven.compiler.source>
@@ -50,7 +59,7 @@ Actualizamos el archivo `pom.xml` para incluir la dependencia de ANTLR y los plu
   <antlr.version>4.9.3</antlr.version>
 </properties>
 
-<!-- Añadir en la sección dependencies -->
+<!-- 📌 Dependencias -->
 <dependencies>
   <!-- ANTLR para análisis léxico y sintáctico -->
   <dependency>
@@ -58,88 +67,119 @@ Actualizamos el archivo `pom.xml` para incluir la dependencia de ANTLR y los plu
     <artifactId>antlr4-runtime</artifactId>
     <version>${antlr.version}</version>
   </dependency>
-  
-  <!-- Otras dependencias... -->
 </dependencies>
 
-<!-- Añadir en la sección build > plugins (fuera de pluginManagement) -->
-<plugins>
-  <!-- Plugin para ANTLR -->
-  <plugin>
-    <groupId>org.antlr</groupId>
-    <artifactId>antlr4-maven-plugin</artifactId>
-    <version>${antlr.version}</version>
-    <executions>
-      <execution>
-        <goals>
-          <goal>antlr4</goal>
-        </goals>
-      </execution>
-    </executions>
-    <configuration>
-      <sourceDirectory>${basedir}/src/main/antlr4</sourceDirectory>
-      <outputDirectory>${basedir}/src/main/java</outputDirectory>
-      <visitor>true</visitor>
-      <listener>true</listener>
-    </configuration>
-  </plugin>
-  
-  <!-- Plugin para crear JAR ejecutable -->
-  <plugin>
-    <artifactId>maven-assembly-plugin</artifactId>
-    <configuration>
-      <archive>
-        <manifest>
-          <mainClass>com.compilador.App</mainClass>
-        </manifest>
-      </archive>
-      <descriptorRefs>
-        <descriptorRef>jar-with-dependencies</descriptorRef>
-      </descriptorRefs>
-    </configuration>
-    <executions>
-      <execution>
-        <id>make-assembly</id>
-        <phase>package</phase>
-        <goals>
-          <goal>single</goal>
-        </goals>
-      </execution>
-    </executions>
-  </plugin>
-</plugins>
+<!-- 📌 Configuración de plugins -->
+<build>
+  <plugins>
+    <!-- 🛠️ Plugin para ANTLR -->
+    <plugin>
+      <groupId>org.antlr</groupId>
+      <artifactId>antlr4-maven-plugin</artifactId>
+      <version>${antlr.version}</version>
+      <executions>
+        <execution>
+          <goals>
+            <goal>antlr4</goal>
+          </goals>
+        </execution>
+      </executions>
+      <configuration>
+        <sourceDirectory>${basedir}/src/main/antlr4</sourceDirectory>
+        <outputDirectory>${basedir}/src/main/java</outputDirectory>
+        <visitor>true</visitor>
+        <listener>true</listener>
+      </configuration>
+    </plugin>
+    
+    <!-- 📦 Plugin para crear un JAR ejecutable -->
+    <plugin>
+      <artifactId>maven-assembly-plugin</artifactId>
+      <configuration>
+        <archive>
+          <manifest>
+            <mainClass>com.compilador.App</mainClass>
+          </manifest>
+        </archive>
+        <descriptorRefs>
+          <descriptorRef>jar-with-dependencies</descriptorRef>
+        </descriptorRefs>
+      </configuration>
+      <executions>
+        <execution>
+          <id>make-assembly</id>
+          <phase>package</phase>
+          <goals>
+            <goal>single</goal>
+          </goals>
+        </execution>
+      </executions>
+    </plugin>
+  </plugins>
+</build>
+```
 
-##Configuración de ANTLR para el Análisis Léxico
-2. Creación de la estructura de directorios para ANTLR
-Creamos el directorio donde residirán nuestros archivos de gramática ANTLR:
-bashCopiarmkdir -p src/main/antlr4/com/compilador
-3. Creación del archivo de gramática ANTLR
-Creamos un archivo src/main/antlr4/com/compilador/MiniLenguaje.g4 con las reglas léxicas básicas:
-antlrCopiargrammar MiniLenguaje;
+---
 
-// Reglas del parser (simplificadas)
+## 🗂️ Configuración de ANTLR para el Análisis Léxico  
+
+### 📂 2. Creación de la Estructura de Directorios  
+
+Ejecutamos el siguiente comando para crear el directorio donde residirán nuestros archivos de gramática **ANTLR**:  
+
+```bash
+mkdir -p src/main/antlr4/com/compilador
+```
+
+---
+
+### 📝 3. Creación del Archivo de Gramática ANTLR  
+
+📌 Creamos el archivo **MiniLenguaje.g4** en `src/main/antlr4/com/compilador/` con las reglas léxicas y sintácticas básicas:  
+
+```antlr
+grammar MiniLenguaje;
+
+// 📌 Reglas del parser
 program : token* EOF ;
 token   : ID | INTEGER | STRING | KEYWORD | OPERATOR | SEPARATOR ;
 
-// Lexer rules (reglas léxicas)
-// Identificadores
+// 📌 Reglas léxicas
+
+// 🆔 Identificadores
 ID          : [a-zA-Z][a-zA-Z0-9_]* ;
 
-// Literales
+// 🔢 Literales
 INTEGER     : [0-9]+ ;
-STRING      : '"' (~["\r\n] | '\\"')* '"' ;
+STRING      : '"' (~["\r\n] | '\"')* '"' ;
 BOOLEAN     : 'true' | 'false' ;
 
-// Palabras clave
+// 🏷️ Palabras clave
 KEYWORD     : 'var' | 'if' | 'else' | 'print' | 'while' | 'function' | 'return' ;
 
-// Operadores
+// 🔣 Operadores
 OPERATOR    : '+' | '-' | '*' | '/' | '%' | '=' | '==' | '!=' | '<' | '>' | '<=' | '>=' | '&&' | '||' | '!' ;
 
-// Separadores
+// ✨ Separadores
 SEPARATOR   : ';' | '(' | ')' | '{' | '}' | ',' | '.' ;
 
-// Ignorar espacios en blanco y comentarios
+// 🧹 Ignorar espacios en blanco y comentarios
 WS          : [ \t\r\n]+ -> skip ;
 COMMENT     : '//' ~[\r\n]* -> skip ;
 BLOCK_COMMENT : '/*' .*? '*/' -> skip ;
+```
+
+---
+
+## 🎯 ¡Listo para Empezar!  
+
+Con esta configuración ya podemos **compilar y probar nuestro compilador TC25** usando **ANTLR4 y Maven**. Ahora podemos comenzar a definir más reglas y construir el análisis semántico.  
+
+🔥 **¡Hora de compilar y ejecutar!**  
+```bash
+mvn clean package
+```
+
+🚀 **¿Próximo paso?** Implementar la generación de código 🛠️✨  
+
+---
