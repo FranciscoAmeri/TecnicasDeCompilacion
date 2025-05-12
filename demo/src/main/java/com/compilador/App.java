@@ -6,7 +6,8 @@ import org.antlr.v4.runtime.tree.*;
 import org.antlr.v4.gui.TreeViewer;
 
 import javax.swing.*;
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.*;
 import java.util.*;
 
 public class App {
@@ -17,9 +18,14 @@ public class App {
         }
 
         try {
+            // Obtener el nombre del archivo de entrada para generar nombres de salida
+            String inputFilePath = args[0];
+            String inputFileName = new File(inputFilePath).getName();
+            String baseName = inputFileName.substring(0, inputFileName.lastIndexOf('.'));
+            
             // 1. ANÁLISIS LÉXICO
-            System.out.println("Analizando archivo: " + args[0]);
-            CharStream input = CharStreams.fromFileName(args[0]);
+            System.out.println("Analizando archivo: " + inputFilePath);
+            CharStream input = CharStreams.fromFileName(inputFilePath);
 
             List<String> erroresLexicos = new ArrayList<>();
             MiLenguajeLexer lexer = new MiLenguajeLexer(input);
@@ -91,17 +97,55 @@ public class App {
             if (!erroresSemanticos.isEmpty()) {
                 System.out.println("\n=== ERRORES SEMÁNTICOS ===");
                 erroresSemanticos.forEach(System.out::println);
+                return; // No continuar si hay errores semánticos
             } else {
                 System.out.println("\n✅ Análisis semántico completado sin errores.");
             }
+            
+            // 5. GENERACIÓN DE CÓDIGO INTERMEDIO
+            System.out.println("\n=== GENERACIÓN DE CÓDIGO INTERMEDIO ===");
+            CodigoVisitor visitor = new CodigoVisitor(tabla);
+            visitor.visit(tree);
+            
+            GeneradorCodigo generador = visitor.getGenerador();
+            generador.imprimirCodigo();
+            
+            // Guardar código intermedio en archivo
+            String codigoIntermedioPath = baseName + "_codigo_intermedio.txt";
+            guardarCodigoEnArchivo(generador.getCodigo(), codigoIntermedioPath);
+            System.out.println("✅ Código intermedio guardado en: " + codigoIntermedioPath);
+            
+            // 6. OPTIMIZACIÓN DE CÓDIGO
+            System.out.println("\n=== OPTIMIZACIÓN DE CÓDIGO ===");
+            Optimizador optimizador = new Optimizador(generador.getCodigo());
+            optimizador.optimizar();
+            optimizador.imprimirCodigoOptimizado();
+            
+            // Guardar código optimizado en archivo
+            String codigoOptimizadoPath = baseName + "_codigo_optimizado.txt";
+            guardarCodigoEnArchivo(optimizador.getCodigoOptimizado(), codigoOptimizadoPath);
+            System.out.println("✅ Código optimizado guardado en: " + codigoOptimizadoPath);
 
         } catch (IOException e) {
-            System.err.println("❌ Error al leer el archivo: " + e.getMessage());
+            System.err.println("❌ Error al leer o escribir archivos: " + e.getMessage());
         } catch (ParseCancellationException e) {
             System.err.println("❌ Error de análisis: " + e.getMessage());
         } catch (Exception e) {
             System.err.println("❌ Error inesperado:");
             e.printStackTrace();
+        }
+    }
+
+    /**
+     * Guarda una lista de líneas de código en un archivo de texto
+     */
+    private static void guardarCodigoEnArchivo(List<String> codigo, String rutaArchivo) throws IOException {
+        Path filePath = Paths.get(rutaArchivo);
+        try (BufferedWriter writer = Files.newBufferedWriter(filePath)) {
+            for (int i = 0; i < codigo.size(); i++) {
+                writer.write(i + ": " + codigo.get(i));
+                writer.newLine();
+            }
         }
     }
 
