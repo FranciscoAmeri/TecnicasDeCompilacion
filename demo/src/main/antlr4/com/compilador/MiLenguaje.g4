@@ -34,6 +34,7 @@ parametro
 
 declaracionVariable
     : tipo ID PYC
+    | tipo ID IGUAL expresion PYC
     ;
 
 asignacion

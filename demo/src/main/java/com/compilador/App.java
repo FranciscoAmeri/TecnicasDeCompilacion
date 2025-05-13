@@ -11,9 +11,15 @@ import java.nio.file.*;
 import java.util.*;
 
 public class App {
+    // Códigos ANSI para colores
+    public static final String RESET = "\u001B[0m";
+    public static final String RED = "\u001B[31m";
+    public static final String GREEN = "\u001B[32m";
+    public static final String YELLOW = "\u001B[33m";
+    
     public static void main(String[] args) {
         if (args.length != 1) {
-            System.out.println("Uso: java -jar compilador.jar <archivo.txt>");
+            System.out.println(RED + "Uso: java -jar compilador.jar <archivo.txt>" + RESET);
             System.exit(1);
         }
 
@@ -34,7 +40,7 @@ public class App {
                 @Override
                 public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol, 
                                         int line, int charPositionInLine, String msg, RecognitionException e) {
-                    erroresLexicos.add("ERROR LÉXICO en línea " + line + ":" + charPositionInLine + " - " + msg);
+                    erroresLexicos.add(RED + "ERROR LÉXICO en línea " + line + ":" + charPositionInLine + " - " + msg + RESET);
                     throw new ParseCancellationException(msg);
                 }
             });
@@ -44,16 +50,16 @@ public class App {
 
             System.out.println("\n=== ANÁLISIS LÉXICO ===");
             if (erroresLexicos.isEmpty()) {
-                System.out.printf("%-20s %-30s %-10s %-10s\n", "TIPO", "LEXEMA", "LÍNEA", "COLUMNA");
-                System.out.println("-------------------------------------------------------------------");
+              //  System.out.printf("%-20s %-30s %-10s %-10s\n", "TIPO", "LEXEMA", "LÍNEA", "COLUMNA");
+               // System.out.println("-------------------------------------------------------------------");
                 for (Token token : tokens.getTokens()) {
                     if (token.getType() != Token.EOF) {
                         String tokenName = MiLenguajeLexer.VOCABULARY.getSymbolicName(token.getType());
-                        System.out.printf("%-20s %-30s %-10d %-10d\n",
-                                tokenName, token.getText(), token.getLine(), token.getCharPositionInLine());
+                        //System.out.printf("%-20s %-30s %-10d %-10d\n",
+                        //        tokenName, token.getText(), token.getLine(), token.getCharPositionInLine());
                     }
                 }
-                System.out.println("\n✅ Análisis léxico completado sin errores.");
+                System.out.println("\n" + GREEN + "✅ Análisis léxico completado sin errores." + RESET);
             } else {
                 erroresLexicos.forEach(System.out::println);
                 return;
@@ -67,7 +73,7 @@ public class App {
                 @Override
                 public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol, 
                                         int line, int charPositionInLine, String msg, RecognitionException e) {
-                    erroresSintacticos.add("ERROR SINTÁCTICO en línea " + line + ":" + charPositionInLine + " - " + msg);
+                    erroresSintacticos.add(RED + "ERROR SINTÁCTICO en línea " + line + ":" + charPositionInLine + " - " + msg + RESET);
                 }
             });
 
@@ -77,9 +83,9 @@ public class App {
                 erroresSintacticos.forEach(System.out::println);
                 return;
             } else {
-                System.out.println("✅ Análisis sintáctico completado sin errores.");
-                System.out.println("Representación textual del árbol sintáctico:");
-                System.out.println(tree.toStringTree(parser));
+                System.out.println(GREEN + "✅ Análisis sintáctico completado sin errores." + RESET);
+              //  System.out.println("Representación textual del árbol sintáctico:");
+              //s  System.out.println(tree.toStringTree(parser));
             }
 
             // 3. VISUALIZACIÓN DEL ÁRBOL SINTÁCTICO
@@ -91,15 +97,36 @@ public class App {
             walker.walk(listener, tree);
 
             TablaSimbolos tabla = listener.getTablaSimbolos();
-            tabla.imprimir();
+           // tabla.imprimir();
 
             List<String> erroresSemanticos = listener.getErrores();
+            List<String> warningsSemanticos = listener.getWarnings();
+            
+            // Colorear errores y warnings
+            List<String> erroresColoreados = new ArrayList<>();
+            for (String error : erroresSemanticos) {
+                erroresColoreados.add(RED + error + RESET);
+            }
+            
+            List<String> warningsColoreados = new ArrayList<>();
+            for (String warning : warningsSemanticos) {
+                warningsColoreados.add(YELLOW + warning + RESET);
+            }
+            
+            // Mostrar errores semánticos
             if (!erroresSemanticos.isEmpty()) {
                 System.out.println("\n=== ERRORES SEMÁNTICOS ===");
-                erroresSemanticos.forEach(System.out::println);
+                erroresColoreados.forEach(System.out::println);
                 return; // No continuar si hay errores semánticos
             } else {
-                System.out.println("\n✅ Análisis semántico completado sin errores.");
+                System.out.println("\n" + GREEN + "✅ Análisis semántico completado sin errores." + RESET);
+            }
+            
+            // Mostrar warnings semánticos (no impiden continuar)
+            if (!warningsSemanticos.isEmpty()) {
+                System.out.println("\n=== WARNINGS SEMÁNTICOS ===");
+                warningsColoreados.forEach(System.out::println);
+                System.out.println("\n" + YELLOW + "⚠️ El código tiene warnings, pero se puede continuar con la compilación." + RESET);
             }
             
             // 5. GENERACIÓN DE CÓDIGO INTERMEDIO
@@ -108,30 +135,30 @@ public class App {
             visitor.visit(tree);
             
             GeneradorCodigo generador = visitor.getGenerador();
-            generador.imprimirCodigo();
+            //generador.imprimirCodigo();
             
             // Guardar código intermedio en archivo
             String codigoIntermedioPath = baseName + "_codigo_intermedio.txt";
             guardarCodigoEnArchivo(generador.getCodigo(), codigoIntermedioPath);
-            System.out.println("✅ Código intermedio guardado en: " + codigoIntermedioPath);
+            System.out.println(GREEN + "✅ Código intermedio guardado en: " + codigoIntermedioPath + RESET);
             
             // 6. OPTIMIZACIÓN DE CÓDIGO
             System.out.println("\n=== OPTIMIZACIÓN DE CÓDIGO ===");
             Optimizador optimizador = new Optimizador(generador.getCodigo());
             optimizador.optimizar();
-            optimizador.imprimirCodigoOptimizado();
+           // optimizador.imprimirCodigoOptimizado();
             
             // Guardar código optimizado en archivo
             String codigoOptimizadoPath = baseName + "_codigo_optimizado.txt";
             guardarCodigoEnArchivo(optimizador.getCodigoOptimizado(), codigoOptimizadoPath);
-            System.out.println("✅ Código optimizado guardado en: " + codigoOptimizadoPath);
+            System.out.println(GREEN + "✅ Código optimizado guardado en: " + codigoOptimizadoPath + RESET);
 
         } catch (IOException e) {
-            System.err.println("❌ Error al leer o escribir archivos: " + e.getMessage());
+            System.err.println(RED + "❌ Error al leer o escribir archivos: " + e.getMessage() + RESET);
         } catch (ParseCancellationException e) {
-            System.err.println("❌ Error de análisis: " + e.getMessage());
+            System.err.println(RED + "❌ Error de análisis: " + e.getMessage() + RESET);
         } catch (Exception e) {
-            System.err.println("❌ Error inesperado:");
+            System.err.println(RED + "❌ Error inesperado:" + RESET);
             e.printStackTrace();
         }
     }
@@ -143,7 +170,7 @@ public class App {
         Path filePath = Paths.get(rutaArchivo);
         try (BufferedWriter writer = Files.newBufferedWriter(filePath)) {
             for (int i = 0; i < codigo.size(); i++) {
-                writer.write(i + ": " + codigo.get(i));
+                writer.write(codigo.get(i));
                 writer.newLine();
             }
         }
@@ -170,7 +197,7 @@ public class App {
             viewer.open();  // Esto lanza una ventana gráfica con el árbol de análisis
 
         } catch (Exception e) {
-            System.err.println("❌ Error al mostrar árbol sintáctico: " + e.getMessage());
+            System.err.println(RED + "❌ Error al mostrar árbol sintáctico: " + e.getMessage() + RESET);
         }
     }
 }

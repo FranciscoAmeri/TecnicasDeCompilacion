@@ -1,0 +1,37 @@
+func_calculaMax:
+t0 = a > b
+if !t0 goto L0
+resultado = a
+goto L1
+L0:
+resultado = b
+L1:
+return resultado
+func_calculaOperacion:
+temp1 = 10
+temp2 = 5
+t1 = x < 0
+if !t1 goto L2
+temp1 = 0
+L2:
+t2 = x * temp1
+t3 = t2 + y
+t4 = t3 * temp2
+resultado = t4
+t5 = resultado > 100
+if !t5 goto L3
+resultado = 100
+L3:
+return resultado
+func_main:
+a = 5
+b = 3
+param a
+param b
+t6 = call calculaMax, 2
+res1 = t6
+param a
+param b
+t7 = call calculaOperacion, 2
+res2 = t7
+return

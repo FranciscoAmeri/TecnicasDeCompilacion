@@ -3,21 +3,40 @@ package com.compilador;
 import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.tree.ErrorNode;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
- * Listener mejorado para construir la tabla de símbolos y realizar verificación de tipos
+ * Listener mejorado para construir la tabla de símbolos y realizar análisis semántico
+ * con distinción entre errores y warnings
  */
 public class SimbolosListener extends MiLenguajeBaseListener {
     
     private TablaSimbolos tablaSimbolos;
     private List<String> errores;
-    private String tipoRetornoActual; // Para verificar return
+    private List<String> warnings;
+    private String tipoRetornoActual;
+    
+    // Conjunto para hacer seguimiento de variables utilizadas
+    private Map<String, Set<String>> variablesUtilizadas; // ámbito -> conjunto de variables utilizadas
+    
+    // Conjunto para hacer seguimiento de variables declaradas
+    private Map<String, Map<String, Integer>> variablesDeclaradas; // ámbito -> (nombre -> línea de declaración)
     
     public SimbolosListener() {
         this.tablaSimbolos = new TablaSimbolos();
         this.errores = new ArrayList<>();
+        this.warnings = new ArrayList<>();
         this.tipoRetornoActual = null;
+        this.variablesUtilizadas = new HashMap<>();
+        this.variablesDeclaradas = new HashMap<>();
+        
+        // Inicializar para ámbito global
+        this.variablesUtilizadas.put("global", new HashSet<>());
+        this.variablesDeclaradas.put("global", new HashMap<>());
     }
     
     /**
@@ -35,6 +54,13 @@ public class SimbolosListener extends MiLenguajeBaseListener {
     }
     
     /**
+     * Obtiene la lista de warnings semánticos
+     */
+    public List<String> getWarnings() {
+        return warnings;
+    }
+    
+    /**
      * Cuando se encuentra una declaración de función
      */
     @Override
@@ -49,6 +75,9 @@ public class SimbolosListener extends MiLenguajeBaseListener {
         TablaSimbolos.Simbolo simbolo = new TablaSimbolos.Simbolo(
             nombre, tipo, "funcion", linea, columna, "global"
         );
+        
+        // Marcar la función como utilizada (siendo una declaración global)
+        variablesUtilizadas.get("global").add(nombre);
         
         // Agregar parámetros si existen
         if (ctx.parametros() != null) {
@@ -72,6 +101,18 @@ public class SimbolosListener extends MiLenguajeBaseListener {
                     errores.add("Error semántico en línea " + paramCtx.ID().getSymbol().getLine() + 
                               ": Parámetro duplicado '" + nombreParam + "'");
                 }
+                
+                // Inicializar el seguimiento para este ámbito si no existe
+                if (!variablesUtilizadas.containsKey(nombre)) {
+                    variablesUtilizadas.put(nombre, new HashSet<>());
+                    variablesDeclaradas.put(nombre, new HashMap<>());
+                }
+                
+                // Marcar el parámetro como declarado
+                variablesDeclaradas.get(nombre).put(nombreParam, paramCtx.ID().getSymbol().getLine());
+                
+                // Marcar el parámetro como utilizado (porque los parámetros se consideran utilizados)
+                variablesUtilizadas.get(nombre).add(nombreParam);
             }
         }
         
@@ -79,10 +120,19 @@ public class SimbolosListener extends MiLenguajeBaseListener {
         if (!tablaSimbolos.agregar(simbolo)) {
             errores.add("Error semántico en línea " + linea + 
                       ": Función '" + nombre + "' ya declarada");
+        } else {
+            // Marcar la función como declarada
+            variablesDeclaradas.get("global").put(nombre, linea);
         }
         
         // Cambiar el ámbito actual
         tablaSimbolos.setAmbito(nombre);
+        
+        // Inicializar el seguimiento para este ámbito si no existe
+        if (!variablesUtilizadas.containsKey(nombre)) {
+            variablesUtilizadas.put(nombre, new HashSet<>());
+            variablesDeclaradas.put(nombre, new HashMap<>());
+        }
         
         // Guardar el tipo de retorno para verificar las sentencias return
         tipoRetornoActual = tipo;
@@ -93,13 +143,12 @@ public class SimbolosListener extends MiLenguajeBaseListener {
      */
     @Override
     public void exitDeclaracionFuncion(MiLenguajeParser.DeclaracionFuncionContext ctx) {
-        // Verificar si la función no void tiene al menos un return
+        String nombreFuncion = ctx.ID().getText();
         String tipo = ctx.tipo().getText();
-        String nombre = ctx.ID().getText();
         
+        // Verificar si la función no void tiene al menos un return
         if (!tipo.equals("void")) {
             // Podríamos hacer un análisis más profundo para garantizar que todos los caminos tienen return
-            // pero eso requeriría un análisis de flujo de control más complejo
             boolean tieneReturn = false;
             
             for (int i = 0; i < ctx.bloque().sentencia().size(); i++) {
@@ -110,14 +159,56 @@ public class SimbolosListener extends MiLenguajeBaseListener {
             }
             
             if (!tieneReturn) {
-                errores.add("Error semántico en función '" + nombre + "': Función con tipo de retorno '" + 
+                errores.add("Error semántico en función '" + nombreFuncion + "': Función con tipo de retorno '" + 
                           tipo + "' debe tener al menos una sentencia return");
+            }
+        }
+        
+        // Verificar variables declaradas pero no utilizadas en este ámbito
+        Set<String> utilizadas = variablesUtilizadas.get(nombreFuncion);
+        Map<String, Integer> declaradas = variablesDeclaradas.get(nombreFuncion);
+        
+        for (Map.Entry<String, Integer> entry : declaradas.entrySet()) {
+            String varNombre = entry.getKey();
+            int varLinea = entry.getValue();
+            
+            if (!utilizadas.contains(varNombre)) {
+                // Solo reportar warnings para variables (no para parámetros, que ya consideramos utilizados)
+                TablaSimbolos.Simbolo simbolo = tablaSimbolos.buscar(varNombre, nombreFuncion);
+                if (simbolo != null && simbolo.getCategoria().equals("variable")) {
+                    warnings.add("Warning semántico en línea " + varLinea + 
+                              ": Variable '" + varNombre + "' declarada pero nunca utilizada");
+                }
             }
         }
         
         // Restaurar el ámbito global y el tipo de retorno
         tablaSimbolos.setAmbito("global");
         tipoRetornoActual = null;
+    }
+    
+    /**
+     * Al salir del programa completo
+     */
+    @Override
+    public void exitPrograma(MiLenguajeParser.ProgramaContext ctx) {
+        // Verificar variables globales declaradas pero no utilizadas
+        Set<String> utilizadas = variablesUtilizadas.get("global");
+        Map<String, Integer> declaradas = variablesDeclaradas.get("global");
+        
+        for (Map.Entry<String, Integer> entry : declaradas.entrySet()) {
+            String varNombre = entry.getKey();
+            int varLinea = entry.getValue();
+            
+            if (!utilizadas.contains(varNombre)) {
+                // Solo reportar warnings para variables (no para funciones, que podrían ser utilizadas externamente)
+                TablaSimbolos.Simbolo simbolo = tablaSimbolos.buscar(varNombre, "global");
+                if (simbolo != null && simbolo.getCategoria().equals("variable")) {
+                    warnings.add("Warning semántico en línea " + varLinea + 
+                              ": Variable global '" + varNombre + "' declarada pero nunca utilizada");
+                }
+            }
+        }
     }
     
     /**
@@ -129,15 +220,19 @@ public class SimbolosListener extends MiLenguajeBaseListener {
         String tipo = ctx.tipo().getText();
         int linea = ctx.ID().getSymbol().getLine();
         int columna = ctx.ID().getSymbol().getCharPositionInLine();
+        String ambito = tablaSimbolos.getAmbito();
         
         // Crear y agregar el símbolo
         TablaSimbolos.Simbolo simbolo = new TablaSimbolos.Simbolo(
-            nombre, tipo, "variable", linea, columna, tablaSimbolos.getAmbito()
+            nombre, tipo, "variable", linea, columna, ambito
         );
         
         if (!tablaSimbolos.agregar(simbolo)) {
             errores.add("Error semántico en línea " + linea + 
                       ": Variable '" + nombre + "' ya declarada en este ámbito");
+        } else {
+            // Marcar la variable como declarada
+            variablesDeclaradas.get(ambito).put(nombre, linea);
         }
     }
     
@@ -148,6 +243,7 @@ public class SimbolosListener extends MiLenguajeBaseListener {
     public void enterAsignacion(MiLenguajeParser.AsignacionContext ctx) {
         String nombre = ctx.ID().getText();
         int linea = ctx.ID().getSymbol().getLine();
+        String ambito = tablaSimbolos.getAmbito();
         
         // Verificar si la variable existe
         TablaSimbolos.Simbolo simbolo = tablaSimbolos.buscar(nombre);
@@ -164,7 +260,10 @@ public class SimbolosListener extends MiLenguajeBaseListener {
             return;
         }
         
-        // La verificación de tipos de la expresión se hará cuando implementemos type checking
+        // Marcar la variable como utilizada
+        // Utilizamos el ámbito donde se declaró la variable
+        String ambitoDeclaracion = simbolo.getAmbito();
+        variablesUtilizadas.get(ambitoDeclaracion).add(nombre);
     }
     
     /**
@@ -179,6 +278,10 @@ public class SimbolosListener extends MiLenguajeBaseListener {
         if (simbolo == null) {
             errores.add("Error semántico en línea " + linea + 
                       ": Identificador '" + nombre + "' no declarado");
+        } else {
+            // Marcar la variable como utilizada
+            String ambitoDeclaracion = simbolo.getAmbito();
+            variablesUtilizadas.get(ambitoDeclaracion).add(nombre);
         }
     }
     
@@ -205,6 +308,9 @@ public class SimbolosListener extends MiLenguajeBaseListener {
             return;
         }
         
+        // Marcar la función como utilizada
+        variablesUtilizadas.get("global").add(nombre);
+        
         // Verificar número de argumentos
         int numArgumentosEsperados = simbolo.getParametros().size();
         int numArgumentosRecibidos = ctx.argumentos() == null ? 0 : ctx.argumentos().expresion().size();
@@ -214,8 +320,6 @@ public class SimbolosListener extends MiLenguajeBaseListener {
                       ": Función '" + nombre + "' espera " + numArgumentosEsperados + 
                       " argumentos, pero recibió " + numArgumentosRecibidos);
         }
-        
-        // Para una verificación completa de tipos, necesitaríamos determinar el tipo de cada expresión
     }
     
     /**
@@ -241,9 +345,10 @@ public class SimbolosListener extends MiLenguajeBaseListener {
                           ": Función con tipo de retorno '" + tipoRetornoActual + 
                           "' debe retornar un valor");
             }
-            // Una verificación completa requeriría determinar el tipo de la expresión
         }
     }
+
+
     
     /**
      * Al encontrar un nodo de error en el árbol de análisis sintáctico
@@ -252,33 +357,6 @@ public class SimbolosListener extends MiLenguajeBaseListener {
     public void visitErrorNode(ErrorNode node) {
         errores.add("Error sintáctico en token: " + node.getText());
     }
+
     
-    /**
-     * Método para determinar el tipo de una expresión (implementación básica)
-     * Una implementación completa requeriría más lógica para evaluar expresiones complejas
-     */
-    private String getTipoExpresion(MiLenguajeParser.ExpresionContext ctx) {
-        if (ctx instanceof MiLenguajeParser.ExpVariableContext) {
-            MiLenguajeParser.ExpVariableContext expVar = (MiLenguajeParser.ExpVariableContext) ctx;
-            TablaSimbolos.Simbolo simbolo = tablaSimbolos.buscar(expVar.ID().getText());
-            return simbolo != null ? simbolo.getTipo() : "desconocido";
-        } 
-        else if (ctx instanceof MiLenguajeParser.ExpEnteroContext) {
-            return "int";
-        } 
-        else if (ctx instanceof MiLenguajeParser.ExpDecimalContext) {
-            return "double";
-        } 
-        else if (ctx instanceof MiLenguajeParser.ExpCaracterContext) {
-            return "char";
-        } 
-        else if (ctx instanceof MiLenguajeParser.ExpFuncionContext) {
-            MiLenguajeParser.ExpFuncionContext expFunc = (MiLenguajeParser.ExpFuncionContext) ctx;
-            TablaSimbolos.Simbolo simbolo = tablaSimbolos.buscar(expFunc.ID().getText());
-            return simbolo != null ? simbolo.getTipo() : "desconocido";
-        }
-        
-        // Para otros tipos de expresiones, necesitarías reglas más complejas
-        return "desconocido";
-    }
 }
