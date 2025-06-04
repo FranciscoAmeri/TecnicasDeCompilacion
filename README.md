@@ -2,17 +2,7 @@
 # 🎓 CodigoVisitor y GeneradorCodigo
 ## Generación de Código Intermedio en Compiladores
 
----
 
-## 📑 Índice de la Presentación
-
-1. **¿Qué es el Código Intermedio?**
-2. **¿Por qué "Código de 3 Direcciones"?**
-3. **División de Responsabilidades**
-4. **Cómo Trabajan Juntos**
-5. **Flujo de Colaboración**
-6. **Advertencias Importantes**
-7. **Beneficios de esta Arquitectura**
 
 ---
 
