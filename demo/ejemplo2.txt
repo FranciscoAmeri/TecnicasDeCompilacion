@@ -1,0 +1,12 @@
+
+
+void main() {
+    int a;
+    int b;
+    int res2;
+    
+    a = 5;
+    b = 3;
+    int res1 = a + b;
+
+}

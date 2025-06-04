@@ -28,6 +28,7 @@ com\compilador\MiLenguajeListener.class
 com\compilador\MiLenguajeParser$SentenciaIfContext.class
 com\compilador\MiLenguajeParser$ExpresionContext.class
 com\compilador\MiLenguajeParser$RetornoContext.class
+com\compilador\GeneradorCodigo$Instruccion.class
 com\compilador\MiLenguajeParser$DeclaracionVariableContext.class
 com\compilador\MiLenguajeParser$ExpParentizadaContext.class
 com\compilador\MiLenguajeBaseVisitor.class
@@ -35,3 +36,4 @@ com\compilador\MiLenguajeParser$ExpDecimalContext.class
 com\compilador\MiLenguajeParser$ArgumentosContext.class
 com\compilador\CodigoVisitor.class
 com\compilador\MiLenguajeParser$ParametroContext.class
+com\compilador\GeneradorCodigo$Instruccion$Tipo.class

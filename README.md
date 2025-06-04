@@ -1,425 +1,285 @@
-# 🚀 Compilador TC25 - Proyecto de Técnicas de Compilación
 
-## ⚙️ Configuración Inicial del Proyecto
-
-### 🏗️ Creación del Proyecto Maven
-Para desarrollar nuestro compilador, comenzamos creando la estructura básica del proyecto con Maven, que facilitará la gestión de dependencias y el ciclo de vida de construcción.
-
-```bash
-mvn org.apache.maven.plugins:maven-archetype-plugin:3.1.2:generate \
-    -DarchetypeArtifactId="maven-archetype-quickstart" \
-    -DarchetypeGroupId="org.apache.maven.archetypes" \
-    -DarchetypeVersion="1.4" \
-    -DgroupId="com.compilador" \
-    -DartifactId="demo"
-```
-
-### 🔧 Configuraciones durante la ejecución:
-
-- 📦 `groupId`: `com.compilador`  
-- 📂 `artifactId`: `demo`  
-- 🔢 `version`: `1.0`  
-- 📁 `package`: `com.compilador`  
-
-Esto genera la siguiente estructura de directorios:
-
-```
-📁 demo/
-├── 📜 pom.xml
-├── 📂 src/
-│   ├── 📂 main/
-│   │   └── 📂 java/
-│   │       └── 📂 com/
-│   │           └── 📂 compilador/
-│   │               └── 📄 App.java
-│   └── 📂 test/
-│       └── 📂 java/
-│           └── 📂 com/
-│               └── 📂 compilador/
-│                   └── 📄 AppTest.java
-```
+# 🎓 CodigoVisitor y GeneradorCodigo
+## Generación de Código Intermedio en Compiladores
 
 ---
 
-## 🛠️ Configuración de ANTLR para el Análisis Léxico
+## 📑 Índice de la Presentación
 
-### 1️⃣ Modificación del `pom.xml`
+1. **¿Qué es el Código Intermedio?**
+2. **¿Por qué "Código de 3 Direcciones"?**
+3. **División de Responsabilidades**
+4. **Cómo Trabajan Juntos**
+5. **Flujo de Colaboración**
+6. **Advertencias Importantes**
+7. **Beneficios de esta Arquitectura**
 
-Añadimos las siguientes dependencias y plugins:
+---
 
-```xml
-<properties>
-  <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-  <maven.compiler.source>1.8</maven.compiler.source>
-  <maven.compiler.target>1.8</maven.compiler.target>
-  <antlr.version>4.9.3</antlr.version>
-</properties>
+## 📚 ¿Qué es el Código Intermedio?
 
-<dependencies>
-  <dependency>
-    <groupId>org.antlr</groupId>
-    <artifactId>antlr4-runtime</artifactId>
-    <version>${antlr.version}</version>
-  </dependency>
-</dependencies>
+### Es el "puente" entre tu código fuente y el código de máquina
 
-<build>
-  <plugins>
-    <plugin>
-      <groupId>org.antlr</groupId>
-      <artifactId>antlr4-maven-plugin</artifactId>
-      <version>${antlr.version}</version>
-      <executions>
-        <execution>
-          <goals>
-            <goal>antlr4</goal>
-          </goals>
-        </execution>
-      </executions>
-      <configuration>
-        <sourceDirectory>${basedir}/src/main/antlr4</sourceDirectory>
-        <outputDirectory>${basedir}/src/main/java</outputDirectory>
-        <visitor>true</visitor>
-        <listener>true</listener>
-      </configuration>
-    </plugin>
-    
-    <plugin>
-      <artifactId>maven-assembly-plugin</artifactId>
-      <configuration>
-        <archive>
-          <manifest>
-            <mainClass>com.compilador.App</mainClass>
-          </manifest>
-        </archive>
-        <descriptorRefs>
-          <descriptorRef>jar-with-dependencies</descriptorRef>
-        </descriptorRefs>
-      </configuration>
-      <executions>
-        <execution>
-          <id>make-assembly</id>
-          <phase>package</phase>
-          <goals>
-            <goal>single</goal>
-          </goals>
-        </execution>
-      </executions>
-    </plugin>
-  </plugins>
-</build>
+```
+Código Fuente       Código Intermedio       Código de Máquina
+    ↓                       ↓                        ↓
+if (x > 5) {        →   t0 = x > 5          →    CMP x, 5
+    y = 10;             if !t0 goto L1           JLE L1
+}                       y = 10                   MOV y, 10
+                        L1:                      L1:
+```
+
+### ✅ **Ventajas del código intermedio:**
+- **Independiente de la máquina** - Un solo código para múltiples procesadores
+- **Fácil de optimizar** - Instrucciones simples y uniformes
+- **Fácil de analizar** - Estructura clara de tres direcciones
+
+---
+
+## 🎯 ¿Por qué "Código de 3 Direcciones"?
+
+### **Formato básico:**
+```
+resultado = operando1 operador operando2
+    ↑          ↑                ↑
+Dirección 1  Dirección 2   Dirección 3
+```
+
+### **Ejemplos concretos:**
+```
+t0 = a + b     ← 3 direcciones: t0, a, b
+x = y * 2      ← 3 direcciones: x, y, 2  
+z = temp1      ← 2 direcciones: z, temp1 (asignación simple)
+goto L1        ← 1 dirección: L1 (salto)
+```
+
+### **Una instrucción NUNCA tiene más de 3 referencias a memoria:**
+
+#### ✅ **Ejemplos válidos:**
+```
+t0 = a + b        (3 direcciones: t0, a, b)
+x = y             (2 direcciones: x, y)  
+goto L1           (1 dirección: L1)
+if x goto L2      (2 direcciones: x, L2)
+```
+
+#### ❌ **Lo que NO es código de 3 direcciones:**
+```
+w = a + b + c     (4 direcciones: w, a, b, c)
+x = y + z * w     (4 direcciones: x, y, z, w)
+```
+
+### **Cómo convertimos expresiones complejas:**
+
+**Expresión original:** `resultado = a + b * c + d;`
+
+**En código de 3 direcciones:**
+```
+t0 = b * c
+t1 = a + t0  
+t2 = t1 + d
+resultado = t2
 ```
 
 ---
 
-### 2️⃣ Crear estructura para archivos ANTLR
+## 🏗️ División de Responsabilidades
 
-```bash
-mkdir -p src/main/antlr4/com/compilador
+### **Analogía: Construyendo una Casa**
+
+#### **CodigoVisitor = El Arquitecto** 🏛️
+- **Lee los planos** (el AST del código fuente)
+- **Toma decisiones estratégicas**: "Aquí va una pared", "Aquí una puerta"
+- **Da órdenes específicas** al constructor
+- **Coordina todo el proyecto**
+
+#### **GeneradorCodigo = El Constructor** 🔨
+- **Ejecuta las órdenes** del arquitecto
+- **Conoce los detalles técnicos**: qué herramientas usar, cómo hacer cada cosa
+- **Tiene las herramientas**: martillo, sierra, etc.
+- **Lleva registro** de todo lo construido
+
+### **Arquitectura del Sistema:**
+```
+┌─────────────────────┬─────────────────────┐
+│   CodigoVisitor     │   GeneradorCodigo   │
+│     (Arquitecto)    │    (Constructor)    │
+├─────────────────────┼─────────────────────┤
+│ ¿QUÉ construir?     │ ¿CÓMO construir?    │
+│ ¿CUÁNDO hacerlo?    │ ¿CON QUÉ hacerlo?   │
+│ ¿EN QUÉ ORDEN?      │ ¿DÓNDE guardarlo?   │
+│                     │                     │
+│ • Recorre el AST    │ • Crea instrucciones│
+│ • Toma decisiones   │ • Maneja temporales │
+│ • Maneja contexto   │ • Maneja etiquetas  │
+│ • Coordina fases    │ • Almacena código   │
+└─────────────────────┴─────────────────────┘
 ```
 
 ---
 
-### 3️⃣ Crear archivo de gramática `MiniLenguaje.g4`
+## 🤝 Cómo Trabajan Juntos
 
-```antlr
-grammar MiniLenguaje;
+### **CodigoVisitor** - "¿QUÉ hacer?"
+- **Encuentra** un nodo IF en el AST
+- **Decide** que necesita evaluar una condición
+- **Determina** qué etiquetas crear
+- **Planifica** el orden de las operaciones
 
-program : token* EOF ;
-token   : ID | INTEGER | STRING | KEYWORD | OPERATOR | SEPARATOR ;
+### **GeneradorCodigo** - "¿CÓMO hacerlo?"
+- **Crea** variables temporales únicas (`t0`, `t1`, `t2`...)
+- **Genera** etiquetas únicas (`L0`, `L1`, `L2`...)
+- **Construye** instrucciones específicas
+- **Almacena** todo el código generado
 
-ID          : [a-zA-Z][a-zA-Z0-9_]* ;
-INTEGER     : [0-9]+ ;
-STRING      : '"' (~["\r\n] | '\"')* '"' ;
-BOOLEAN     : 'true' | 'false' ;
+---
 
-KEYWORD     : 'var' | 'if' | 'else' | 'print' | 'while' | 'function' | 'return' ;
+## 🔄 Flujo de Colaboración
 
-OPERATOR    : '+' | '-' | '*' | '/' | '%' | '=' | '==' | '!=' | '<' | '>' | '<=' | '>=' | '&&' | '||' | '!' ;
+### **Ejemplo paso a paso: `if (a > b) { x = 1; }`**
 
-SEPARATOR   : ';' | '(' | ')' | '{' | '}' | ',' | '.' ;
+1. **Visitor encuentra IF**: "Necesito procesar una condición"
+2. **Visitor evalúa condición**: "Necesito comparar a > b"
+3. **Generador crea la comparación**: Genera `t0 = a > b`
+4. **Visitor decide el salto**: "Si es falso, saltar"
+5. **Generador ejecuta el salto**: Genera `if !t0 goto L0`
 
-WS          : [ \t\r\n]+ -> skip ;
-COMMENT     : '//' ~[\r\n]* -> skip ;
-BLOCK_COMMENT : '/*' .*? '*/' -> skip ;
+### **Código intermedio resultante:**
+```
+0: t0 = a > b
+1: if !t0 goto L0
+2: x = 1
+3: L0:
 ```
 
 ---
 
-## 💡 Características añadidas
+## ⚠️ Advertencias Importantes
 
-- 🔡 Soporte para literales de tipo decimal
-- 📝 Soporte para caracteres con comillas simples
-- 🔄 Operadores de comparación extendidos
-- 🧮 Operadores lógicos (`&&`, `||`)
-- 📌 Nuevas palabras clave: `VOID`, `INT`, `CHAR`, `DOUBLE`, `RETURN`
-- 💬 Manejo completo de comentarios
+### 🚨 **PROBLEMA 1: Orden de Operandos en RESTA**
 
----
-💡 Características añadidas
-🔡 Soporte para literales de tipo decimal
-
-📝 Soporte para caracteres con comillas simples
-
-🔄 Operadores de comparación extendidos
-
-🧮 Operadores lógicos (&&, ||)
-
-📌 Nuevas palabras clave: VOID, INT, CHAR, DOUBLE, RETURN
-
-💬 Manejo completo de comentarios
-## 📝 Ejemplo Actualizado
-
-### 📌 Código de entrada
-
-```java
-// Variables con diferentes tipos de datos
-int suma(int a, int b) {
-    return a + b;
-}
-
-void main() {
-    int resultado;
-    resultado = suma(5, 3);
-}
+#### ❌ **Error Común:**
+```
+// Código fuente: x = a - b
+// INCORRECTO:
+t0 = b - a
+x = t0
 ```
 
-### 📊 Salida del Análisis Léxico
-
+#### ✅ **Correcto:**
 ```
-Analizando archivo: ejemplo.txt
-
-=== ANÁLISIS LÉXICO ===
-TIPO                 LEXEMA                         LÍNEA      COLUMNA   
--------------------------------------------------------------------
-INT                  int                            1          0
-ID                   suma                           1          4
-PA                   (                              1          8
-INT                  int                            1          9
-ID                   a                              1          13        
-COMA                 ,                              1          14
-INT                  int                            1          16
-ID                   b                              1          20
-PC                   )                              1          21
-LA                   {                              1          23
-RETURN               return                         2          4
-ID                   a                              2          11
-SUM                  +                              2          13        
-ID                   b                              2          15
-PYC                  ;                              2          16
-LC                   }                              3          0
-VOID                 void                           5          0
-ID                   main                           5          5
-PA                   (                              5          9
-PC                   )                              5          10
-LA                   {                              5          12
-INT                  int                            6          4
-ID                   resultado                      6          8
-PYC                  ;                              6          17
-ID                   resultado                      7          4         
-IGUAL                =                              7          14
-ID                   suma                           7          16
-PA                   (                              7          20
-INTEGER              5                              7          21
-COMA                 ,                              7          22
-INTEGER              3                              7          24
-PC                   )                              7          25
-PYC                  ;                              7          26
-LC                   }                              8          0
-
-? Análisis léxico completado sin errores.
-
-=== ANÁLISIS SINTÁCTICO ===
-? Análisis sintáctico completado sin errores.
-Representación textual del árbol sintáctico:
-(programa (sentencia (declaracionFuncion (tipo int) suma ( (parametros (parametro (tipo int) a) , (parametro (tipo int) b)) ) (bloque { (sentencia (retorno return (expresion (expresion a) (operadorBinario +) (expresion b)) ;)) }))) (sentencia (declaracionFuncion (tipo void) main ( ) (bloque { (sentencia (declaracionVariable (tipo int) resultado ;)) (sentencia (asignacion resultado = (expresion suma ( (argumentos (expresion 5) , (expresion 3)) )) ;)) }))) <EOF>)
-
-=== TABLA DE SÍMBOLOS ===
-NOMBRE          TIPO       CATEGORÍA       LÍNEA      COLUMNA    ÁMBITO          PARÁMETROS
---------------------------------------------------------------------------------------------
-a               int        parametro       1          13         suma
-b               int        parametro       1          20         suma
-suma            int        funcion         1          4          global          [int, int]
-main            void       funcion         5          5          global
-
-? Análisis semántico completado sin errores.
+// Código fuente: x = a - b  
+t0 = a - b
+x = t0
 ```
 
 ---
-# 📊 Tabla de Símbolos
 
-## 🔍 ¿Qué es la Tabla de Símbolos?
+### 🚨 **PROBLEMA 2: División por Cero**
 
-La **Tabla de Símbolos** es una estructura de datos fundamental en nuestro compilador que almacena información sobre todos los identificadores (variables, funciones, parámetros) que aparecen en el programa fuente. Funciona como un diccionario que registra información esencial sobre cada símbolo para facilitar las fases de **análisis semántico** y **generación de código**.
-
----
-
-## 🏗️ Estructura de la Tabla de Símbolos
-
-Nuestra implementación consta de los siguientes componentes:
-
-### 📌 Clase `Simbolo`
-
-Cada entrada en la tabla contiene:
-
-- **nombre**: Identificador del símbolo  
-- **tipo**: Tipo de dato (`int`, `char`, `double`, `void`)  
-- **categoría**: Clasificación del símbolo (`variable`, `funcion`, `parametro`)  
-- **línea y columna**: Posición en el código fuente donde se declaró  
-- **ámbito**: Contexto de visibilidad (`global` o nombre de la función)  
-- **parámetros**: Lista de tipos de parámetros (solo para funciones)  
-
----
-
-## 🔄 Gestión de Ámbitos
-
-La tabla maneja dos niveles de ámbito:
-
-- **Ámbito global**: Accesible desde cualquier parte del programa  
-- **Ámbito local**: Específico de cada función, solo visible dentro de ella  
-
----
-
-## 🛠️ Funcionalidades Principales
-
-La Tabla de Símbolos ofrece las siguientes operaciones:
-
-- **Agregar símbolos (`agregar`)**:  
-  Inserta nuevas entradas verificando duplicidad en el mismo ámbito
-
-- **Búsqueda de símbolos (`buscar`)**:
-  - Búsqueda en el ámbito actual
-  - Búsqueda en ámbito específico
-  - Búsqueda considerando la jerarquía de ámbitos (local → global)
-
-- **Gestión de ámbitos (`setAmbito`, `getAmbito`)**:  
-  Establecer y consultar el ámbito actual
-
-- **Visualización (`imprimir`)**:  
-  Mostrar el contenido completo de la tabla
-
----
-
-## 📝 Ejemplo de Salida
-
-=== TABLA DE SÍMBOLOS === NOMBRE TIPO CATEGORÍA LÍNEA COLUMNA ÁMBITO PARÁMETROS
-a int parametro 1 13 suma b int parametro 1 20 suma suma int funcion 1 4 global [int, int] main void funcion 5 5 global resultado int variable 6 8 main
-
-yaml
-Copiar
-Editar
-
----
-
-## 🧩 Importancia en el Proceso de Compilación
-
-La Tabla de Símbolos es crucial para:
-
-- **Verificación de tipos**: Comprobar que las operaciones sean compatibles con los tipos de datos  
-- **Control de ámbitos**: Gestionar la visibilidad y acceso a variables  
-- **Detección de errores semánticos**:
-  - Uso de variables no declaradas
-  - Redeclaración de identificadores
-  - Inconsistencias en el número o tipo de parámetros en llamadas a funciones
-
-- **Generación de código**:  
-  Proporciona información necesaria para la generación de código intermedio o código objeto
-
----
-
-## 📈 Implementación Eficiente
-
-Nuestra implementación utiliza estructuras de datos optimizadas:
-
-- `ArrayList` para almacenar los símbolos  
-- Métodos de búsqueda considerando jerarquía de ámbitos  
-- Formato de visualización claro para depuración  
-
-# 🧠 Construcción de la Tabla mediante `SimbolosListener`
-
-La **Tabla de Símbolos** se construye durante el recorrido del árbol sintáctico a través de un **listener especializado**.
-
----
-
-## 🔄 Clase `SimbolosListener`
-
-Esta clase extiende `MiLenguajeBaseListener` generado por ANTLR4 e implementa los siguientes métodos clave:
-
-### 📌 Gestión de funciones:
-
-- `enterDeclaracionFuncion`:  
-  Registra la función y sus parámetros, cambiando al ámbito de la función
-
-- `exitDeclaracionFuncion`:  
-  Restaura el ámbito global al salir de la función
-
-### 📌 Verificación de variables:
-
-- `enterExpVariable`:  
-  Comprueba que las variables utilizadas hayan sido declaradas previamente
-
-### 📌 Manejo de errores:
-
-- `visitErrorNode`:  
-  Captura errores sintácticos detectados durante el análisis
-
-> Se mantiene una **lista de errores semánticos** para informar al usuario.
-
----
-
-## 📋 Proceso de Construcción
-
-Durante el recorrido del árbol, el listener:
-
-- Captura declaraciones de funciones y sus parámetros  
-- Registra variables locales y globales  
-- Verifica referencias a identificadores  
-- Detecta errores como:
-  - Redeclaración de funciones o variables
-  - Uso de variables no declaradas
-  - Parámetros duplicados
-
----
-
-## 📊 Ejemplo de Código para Análisis Semántico
-
-```java
-// Crear el listener para tabla de símbolos
-SimbolosListener simbolosListener = new SimbolosListener();
-
-// Recorrer el árbol con el listener
-ParseTreeWalker walker = new ParseTreeWalker();
-walker.walk(simbolosListener, tree);
-
-// Obtener la tabla de símbolos construida
-TablaSimbolos tabla = simbolosListener.getTablaSimbolos();
-
-// Verificar si hay errores semánticos
-List<String> errores = simbolosListener.getErrores();
-if (!errores.isEmpty()) {
-    for (String error : errores) {
-        System.err.println(error);
-    }
-} else {
-    // Mostrar la tabla de símbolos
-    tabla.imprimir();
-}
-
-
-## 🚀 ¡Hora de Compilar y Ejecutar!
-
-### 📦 Compilar el proyecto
-
-```bash
-mvn clean package
+#### ❌ **Código Peligroso:**
+```
+// Código fuente: result = x / 0
+t0 = x / 0
+result = t0
 ```
 
-### ▶️ Ejecutar el compilador
+#### ✅ **Solución:**
+- Detectar división por cero en tiempo de compilación
+- Generar error o verificación en tiempo de ejecución
 
-```bash
-mvn package assembly:single
-java -jar target/demo-1.0-jar-with-dependencies.jar ejemplo.txt   
-java -jar target/demo-1.0-jar-with-dependencies.jar ejemplo_error.txt
+---
+
+### 🚨 **PROBLEMA 3: Precedencia en Restas Encadenadas**
+
+#### ❌ **Error de Precedencia:**
+```
+// Código fuente: x = a - b - c
+t0 = b - c
+t1 = a - t0
+x = t1
 ```
 
+#### ✅ **Correcto (Asociatividad izquierda):**
+```
+// Código fuente: x = a - b - c
+t0 = a - b
+t1 = t0 - c
+x = t1
+```
 
+---
+
+### 🚨 **PROBLEMA 4: Operadores Sensibles al Orden**
+
+#### **Operadores NO conmutativos (orden importa):**
+```
+- (resta)
+ / (división)
+ % (módulo)
+ < (menor que)
+ > (mayor que)
+ <= (menor igual)
+ >= (mayor igual)
+```
+
+#### **Operadores conmutativos (orden no importa):**
+```
++ (suma)
+* (multiplicación)
+== (igualdad)
+!= (diferencia)
+&& (AND lógico)
+|| (OR lógico)
+```
+
+---
+
+## ✅ Lista de Verificación para Operaciones
+
+### **Antes de generar código:**
+- [ ] ¿El orden de operandos es correcto?
+- [ ] ¿Hay división por cero literal?
+- [ ] ¿Los tipos son compatibles?
+- [ ] ¿La precedencia es correcta?
+- [ ] ¿La asociatividad es izquierda para -, /, %?
+
+### **Durante la generación:**
+- [ ] ¿Los operadores no conmutativos mantienen el orden?
+- [ ] ¿Se generan advertencias apropiadas?
+- [ ] ¿Se manejan las conversiones de tipo?
+
+### **Después de generar:**
+- [ ] ¿El código intermedio refleja la semántica original?
+- [ ] ¿Las optimizaciones posteriores respetan el orden?
+
+---
+
+## 🎯 Beneficios de esta Arquitectura
+
+### ✅ **Separación de responsabilidades**
+- **Visitor**: Se enfoca en la lógica del lenguaje
+- **Generador**: Se enfoca en la mecánica de construcción
+
+### ✅ **Reutilización**
+- El mismo generador puede usarse con diferentes visitors
+- Fácil crear visitors especializados (optimización, depuración)
+
+### ✅ **Mantenibilidad**
+- Cambios en la generación no afectan la lógica de recorrido
+- Fácil agregar nuevas optimizaciones
+
+### ✅ **Extensibilidad**
+- Agregar nuevas instrucciones es sencillo
+- Soporte para múltiples arquitecturas
+
+---
+
+## 🎪 Actividad Práctica
+
+### **Tracemos juntos: `y = a + b * 3`**
+```
+t0 = b * 3
+t1 = a + t0
+y = t1
+```

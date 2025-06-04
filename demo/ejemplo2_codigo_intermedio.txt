@@ -1,0 +1,10 @@
+func_main:
+declare int a
+declare int b
+declare int res2
+declare int res1
+t0 = a + b
+res1 = t0
+a = 5
+b = 3
+return
