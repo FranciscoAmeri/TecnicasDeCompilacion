@@ -263,13 +263,3 @@ x = t1
 - Agregar nuevas instrucciones es sencillo
 - Soporte para múltiples arquitecturas
 
----
-
-## 🎪 Actividad Práctica
-
-### **Tracemos juntos: `y = a + b * 3`**
-```
-t0 = b * 3
-t1 = a + t0
-y = t1
-```
