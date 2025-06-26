@@ -38,6 +38,26 @@ public interface MiLenguajeListener extends ParseTreeListener {
 	 */
 	void exitSentenciaIf(MiLenguajeParser.SentenciaIfContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link MiLenguajeParser#sentenciaFor}.
+	 * @param ctx the parse tree
+	 */
+	void enterSentenciaFor(MiLenguajeParser.SentenciaForContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link MiLenguajeParser#sentenciaFor}.
+	 * @param ctx the parse tree
+	 */
+	void exitSentenciaFor(MiLenguajeParser.SentenciaForContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link MiLenguajeParser#sentenciaWhile}.
+	 * @param ctx the parse tree
+	 */
+	void enterSentenciaWhile(MiLenguajeParser.SentenciaWhileContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link MiLenguajeParser#sentenciaWhile}.
+	 * @param ctx the parse tree
+	 */
+	void exitSentenciaWhile(MiLenguajeParser.SentenciaWhileContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link MiLenguajeParser#bloque}.
 	 * @param ctx the parse tree
 	 */
@@ -47,6 +67,56 @@ public interface MiLenguajeListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitBloque(MiLenguajeParser.BloqueContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link MiLenguajeParser#declaracionClase}.
+	 * @param ctx the parse tree
+	 */
+	void enterDeclaracionClase(MiLenguajeParser.DeclaracionClaseContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link MiLenguajeParser#declaracionClase}.
+	 * @param ctx the parse tree
+	 */
+	void exitDeclaracionClase(MiLenguajeParser.DeclaracionClaseContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link MiLenguajeParser#miembroClase}.
+	 * @param ctx the parse tree
+	 */
+	void enterMiembroClase(MiLenguajeParser.MiembroClaseContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link MiLenguajeParser#miembroClase}.
+	 * @param ctx the parse tree
+	 */
+	void exitMiembroClase(MiLenguajeParser.MiembroClaseContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link MiLenguajeParser#constructor}.
+	 * @param ctx the parse tree
+	 */
+	void enterConstructor(MiLenguajeParser.ConstructorContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link MiLenguajeParser#constructor}.
+	 * @param ctx the parse tree
+	 */
+	void exitConstructor(MiLenguajeParser.ConstructorContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link MiLenguajeParser#modificadorAcceso}.
+	 * @param ctx the parse tree
+	 */
+	void enterModificadorAcceso(MiLenguajeParser.ModificadorAccesoContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link MiLenguajeParser#modificadorAcceso}.
+	 * @param ctx the parse tree
+	 */
+	void exitModificadorAcceso(MiLenguajeParser.ModificadorAccesoContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link MiLenguajeParser#declaracionNamespace}.
+	 * @param ctx the parse tree
+	 */
+	void enterDeclaracionNamespace(MiLenguajeParser.DeclaracionNamespaceContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link MiLenguajeParser#declaracionNamespace}.
+	 * @param ctx the parse tree
+	 */
+	void exitDeclaracionNamespace(MiLenguajeParser.DeclaracionNamespaceContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link MiLenguajeParser#declaracionFuncion}.
 	 * @param ctx the parse tree
@@ -142,6 +212,42 @@ public interface MiLenguajeListener extends ParseTreeListener {
 	 */
 	void exitExpDecimal(MiLenguajeParser.ExpDecimalContext ctx);
 	/**
+	 * Enter a parse tree produced by the {@code expPuntero}
+	 * labeled alternative in {@link MiLenguajeParser#expresion}.
+	 * @param ctx the parse tree
+	 */
+	void enterExpPuntero(MiLenguajeParser.ExpPunteroContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code expPuntero}
+	 * labeled alternative in {@link MiLenguajeParser#expresion}.
+	 * @param ctx the parse tree
+	 */
+	void exitExpPuntero(MiLenguajeParser.ExpPunteroContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code expArray}
+	 * labeled alternative in {@link MiLenguajeParser#expresion}.
+	 * @param ctx the parse tree
+	 */
+	void enterExpArray(MiLenguajeParser.ExpArrayContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code expArray}
+	 * labeled alternative in {@link MiLenguajeParser#expresion}.
+	 * @param ctx the parse tree
+	 */
+	void exitExpArray(MiLenguajeParser.ExpArrayContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code expDireccion}
+	 * labeled alternative in {@link MiLenguajeParser#expresion}.
+	 * @param ctx the parse tree
+	 */
+	void enterExpDireccion(MiLenguajeParser.ExpDireccionContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code expDireccion}
+	 * labeled alternative in {@link MiLenguajeParser#expresion}.
+	 * @param ctx the parse tree
+	 */
+	void exitExpDireccion(MiLenguajeParser.ExpDireccionContext ctx);
+	/**
 	 * Enter a parse tree produced by the {@code expBinaria}
 	 * labeled alternative in {@link MiLenguajeParser#expresion}.
 	 * @param ctx the parse tree
@@ -177,6 +283,18 @@ public interface MiLenguajeListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitExpCaracter(MiLenguajeParser.ExpCaracterContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code expDesreferencia}
+	 * labeled alternative in {@link MiLenguajeParser#expresion}.
+	 * @param ctx the parse tree
+	 */
+	void enterExpDesreferencia(MiLenguajeParser.ExpDesreferenciaContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code expDesreferencia}
+	 * labeled alternative in {@link MiLenguajeParser#expresion}.
+	 * @param ctx the parse tree
+	 */
+	void exitExpDesreferencia(MiLenguajeParser.ExpDesreferenciaContext ctx);
 	/**
 	 * Enter a parse tree produced by the {@code expEntero}
 	 * labeled alternative in {@link MiLenguajeParser#expresion}.

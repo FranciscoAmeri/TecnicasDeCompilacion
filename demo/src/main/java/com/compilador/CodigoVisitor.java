@@ -71,7 +71,7 @@ public class CodigoVisitor extends MiLenguajeBaseVisitor<String> {
         
         // Procesar la expresión del lado derecho
         System.out.println("🎯 VISITOR: Evaluando expresión del lado derecho...");
-        String resultado = visit(ctx.expresion());
+        String resultado = visit(ctx.expresion().get(0));
         
         // Generar la asignación
         System.out.println("🎯 VISITOR: Generando asignación final...");
