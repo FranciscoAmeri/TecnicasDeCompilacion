@@ -1,45 +1,56 @@
-int calculaMax(int a, int b) {
+// Archivo de prueba SIN errores - SÚPER SIMPLE
+// Compatible con la gramática básica
+
+// Variables globales
+int contadorGlobal;
+double valorPi;
+char inicial;
+bool activo;
+
+// Función simple que retorna valor
+int sumar(int a, int b) {
     int resultado;
-    
-    if (a > b) {
-        resultado = a;
-    } else {
-        resultado = b;
-    }
-    
+    resultado = a + b;
+    contadorGlobal = contadorGlobal + 1;
     return resultado;
 }
 
-int calculaOperacion(int x, int y) {
-    int temp1;
-    int temp2;
-    int resultado;
+// Función main
+int main() {
+    int estado;
+    int temp;
+    int numeros[3];
     
-    temp1 = 10;
-    temp2 = 5;
+    // Inicializar variables globales
+    contadorGlobal = 0;
+    valorPi = 3.14;
+    inicial = 'M';
     
-    if (x < 0) {
-        temp1 = 0;
+    // Usar arrays
+    numeros[0] = 10;
+    numeros[1] = 20;
+    numeros[2] = 30;
+    
+    // Operaciones básicas
+    temp = numeros[0] + numeros[1];
+    temp = temp * 2;
+    temp = temp / 3;
+    temp = temp % 5;
+    
+    // Usar función que retorna valor
+    estado = sumar(temp, 5);
+    
+    // Usar variables globales
+    contadorGlobal = estado;
+    valorPi = temp;
+    inicial = 'X';
+    
+    // Estructuras de control básicas
+    if (estado > 0) {
+        int auxiliar;
+        auxiliar = estado + 10;
+        estado = auxiliar;
     }
     
-    resultado = x * temp1 + y * temp2;
-    
-    if (resultado > 100) {
-        resultado = 100;
-    }
-    
-    return resultado;
-}
-
-void main() {
-    int a;
-    int b;
-    int res1;
-    int res2;
-    
-    a = 5;
-    b = 3;
-    
-    res1 = calculaMax(a, b);
-    res2 = calculaOperacion(a, b);
+    return estado;
 }

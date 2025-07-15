@@ -1,34 +1,36 @@
 // Código de tres direcciones generado automáticamente
 // Archivo: ejemplo_codigo_intermedio.txt
-// Total de instrucciones: 30
+// Total de instrucciones: 32
 
-  0: func_calculaMax:
-  1: t0 = a > b
-  2: if !t0 goto L0
-  3: resultado = a
-  4: goto L1
-  5: L0:
-  6: resultado = b
-  7: L1:
-  8: return resultado
-  9: func_calculaOperacion:
- 10: temp1 = 10
- 11: temp2 = 5
- 12: t1 = x < 0
- 13: if !t1 goto L2
- 14: temp1 = 0
- 15: L2:
- 16: t2 = x * temp1
- 17: t3 = t2 + y
- 18: t4 = t3 * temp2
- 19: resultado = t4
- 20: t5 = resultado > 100
- 21: if !t5 goto L4
- 22: resultado = 100
- 23: L4:
- 24: return resultado
- 25: func_main:
- 26: a = 5
- 27: b = 3
- 28: res1 = null
- 29: res2 = null
+  0: func_sumar:
+  1: t0 = a + b
+  2: resultado = t0
+  3: t1 = contadorGlobal + 1
+  4: contadorGlobal = t1
+  5: return resultado
+  6: func_main:
+  7: contadorGlobal = 0
+  8: valorPi = null
+  9: inicial = null
+ 10: numeros = 0
+ 11: numeros = 1
+ 12: numeros = 2
+ 13: t2 = null + null
+ 14: temp = t2
+ 15: t3 = temp * 2
+ 16: temp = t3
+ 17: t4 = temp / 3
+ 18: temp = t4
+ 19: t5 = temp % 5
+ 20: temp = t5
+ 21: estado = null
+ 22: contadorGlobal = estado
+ 23: valorPi = temp
+ 24: inicial = null
+ 25: t6 = estado > 0
+ 26: if !t6 goto L0
+ 27: t7 = estado + 10
+ 28: auxiliar = t7
+ 29: estado = auxiliar
+ 30: L0:
+ 31: return estado
