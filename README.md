@@ -130,12 +130,6 @@ Código fuente (.txt)
   MiLenguajeLexer                 MiLenguajeParser                SemanticAnalyzer
 ```
 
-| Fase | Pregunta que responde | Qué detecta |
-|------|----------------------|-------------|
-| Léxica | ¿Son válidos los caracteres? | `@`, `#`, caracteres no reconocidos |
-| Sintáctica | ¿Es válida la estructura? | `;` faltante, `{` sin cerrar, expresión incompleta |
-| Semántica | ¿Tiene sentido el programa? | Variable no declarada, tipos incompatibles, condición no booleana |
-
 ---
 
 ## 2. Arquitectura del proyecto
@@ -304,117 +298,258 @@ int suma = texto + 5;
 
 ---
 
-## 5. Validaciones realizadas
+## 5. Qué errores detecta el analizador semántico
 
-### Variables
-
-| Código | Nombre | Descripción | Ejemplo de error |
-|--------|--------|-------------|-----------------|
-| V1 | Variable no declarada | Se usa una variable que no fue declarada | `cout << z;` (z no existe) |
-| V2 | Redeclaración | Se declara una variable que ya existe en el mismo scope | `int x = 1; int x = 2;` |
-| V3 | Tipos incompatibles | El tipo de la expresión no es asignable al tipo de la variable | `bool activo = 42;` |
-| V4 | Variable no inicializada | Se usa una variable declarada pero sin asignar valor | `int x; cout << x;` |
-
-### Tipos
-
-| Código | Nombre | Descripción |
-|--------|--------|-------------|
-| T1 | Aritmética inválida | Operandos de `+`, `-`, `*`, `/`, `%` no son numéricos |
-| T2 | Lógica inválida | Operandos de `&&`, `\|\|`, `!` no son `bool` |
-| T3 | Relacional inválida | Operandos de `<`, `>`, `<=`, `>=` no son numéricos |
-| T4 | Igualdad inválida | Operandos de `==`, `!=` son de tipos incomparables |
-
-### Control de flujo
-
-| Código | Nombre | Descripción |
-|--------|--------|-------------|
-| C1 | Condición if no bool | La expresión del `if` no es booleana |
-| C2 | Condición while no bool | La expresión del `while` no es booleana |
-
-### Scopes
-
-| Código | Nombre | Descripción |
-|--------|--------|-------------|
-| S1 | Scope por bloque | Cada `{ }` crea un ámbito nuevo |
-| S2 | Visibilidad | Variables locales no son visibles fuera de su bloque |
+El análisis semántico NO verifica estructura (eso ya lo hizo el parser).
+Verifica que el programa tenga **sentido**: tipos correctos, variables declaradas, condiciones booleanas, etc.
 
 ---
 
-## 6. Manejo de errores
+### Uso de variables no declaradas
 
-### Acumulación de errores
-
-A diferencia de los errores léxicos y sintácticos (que detienen el análisis), los errores semánticos se **acumulan**. El analizador siempre intenta continuar para reportar todos los errores en una sola pasada.
-
-```java
-// En SemanticAnalyzer, los errores se acumulan en una lista
-private void error(Token token, String mensaje) {
-    errores.add(new SemanticError(token.getLine(), token.getCharPositionInLine(), mensaje));
-    // El análisis NO se detiene
-}
-```
-
-### Formato de error
-
-```
-[Línea 15:13] Error semántico: variable 'z' no fue declarada.
-[Línea 22:4]  Error semántico: variable 'x' ya fue declarada en este ámbito.
-[Línea 28:5]  Error semántico: no se puede asignar tipo 'int' a variable de tipo 'bool'.
-```
-
-### Prevención de errores en cascada
-
-Cuando una expresión ya falló, retorna el tipo centinela `ERROR`. Las operaciones que reciben `ERROR` como operando retornan `ERROR` inmediatamente **sin reportar un error nuevo**, evitando una cascada de falsos positivos.
-
-```
-int suma = texto + 5;  // texto es string
-           ↑
-           inferirAritmetico("string", "int")
-           → ERROR: "el operador '+' no puede aplicarse a tipos 'string' e 'int'"
-           ↓
-           suma tiene tipo ERROR
-           ↓
-           Si luego se usa suma en otra operación:
-           inferirAritmetico("ERROR", "int") → ERROR (sin nuevo mensaje)
-```
-
----
-
-## 7. Ejemplos prácticos
-
-### Programa válido (`ejemplo_semantico.txt`)
+Si usás una variable que nunca fue declarada, el analizador lo detecta.
 
 ```cpp
-// Tipos básicos bien asignados
-int    entero   = 42;
-float  decimal  = 3.14;
-double preciso  = 2.718281828;
-bool   activo   = true;
-string nombre   = "Ana";
-char   inicial  = 'A';
+int resultado = z + 1;   // ERROR: 'z' no existe
+```
+```
+Error semántico: variable 'z' no fue declarada.
+```
 
-// Ampliación numérica válida: int puede asignarse a float o double
-float  f = 10;
-double d = 3.14;
+---
 
-// Operaciones aritméticas válidas
+### Declarar la misma variable dos veces en el mismo bloque
+
+No podés tener dos variables con el mismo nombre en el mismo ámbito.
+
+```cpp
+int x = 10;
+int x = 20;   // ERROR: x ya existe
+```
+```
+Error semántico: variable 'x' ya fue declarada en este ámbito.
+```
+
+Nota: sí es válido tener una variable `x` global y otra `x` dentro de un `if { }`, porque están en **ámbitos distintos**.
+
+---
+
+### Asignar un tipo incompatible
+
+Cada variable tiene un tipo fijo. No podés guardar un texto en un `int`, ni un número en un `bool`.
+
+```cpp
+bool activo = 42;        // ERROR: 42 es int, no bool
+string nombre = "Juan";
+nombre = 99;             // ERROR: 99 es int, no string
+```
+```
+Error semántico: no se puede asignar tipo 'int' a variable de tipo 'bool'.
+Error semántico: no se puede asignar tipo 'int' a variable de tipo 'string'.
+```
+
+Lo que sí está permitido es asignar un `int` a un `float` o `double` (el número se amplía automáticamente):
+
+```cpp
+float f = 10;      // OK: int → float, se convierte solo
+double d = 3.14;   // OK: mismo tipo
+```
+
+---
+
+### Usar una variable sin inicializar
+
+Si declarás una variable pero nunca le asignás un valor, el analizador avisa.
+
+```cpp
+int sinValor;
+int uso = sinValor + 1;   // AVISO: sinValor podría no estar inicializada
+```
+```
+Error semántico: variable 'sinValor' podría no estar inicializada.
+```
+
+---
+
+### Operaciones aritméticas con tipos que no son números
+
+Los operadores `+`, `-`, `*`, `/`, `%` solo funcionan con `int`, `float` o `double`.
+
+```cpp
+string texto = "hola";
+int suma = texto + 5;   // ERROR: no tiene sentido sumar texto y número
+```
+```
+Error semántico: el operador '+' no puede aplicarse a tipos 'string' e 'int'.
+```
+
+Cuando se mezclan tipos numéricos, el resultado es el tipo más preciso:
+```cpp
+int    a = 5;
+double b = 3.14;
+double c = a + b;   // OK: int + double = double
+```
+
+---
+
+### Operadores lógicos con tipos que no son bool
+
+Los operadores `&&`, `||`, `!` solo funcionan con valores `true`/`false`.
+
+```cpp
+int a = 5;
+int b = 3;
+bool cond = a && b;   // ERROR: && necesita dos bool, no dos int
+
+int num = 5;
+bool negado = !num;   // ERROR: ! necesita un bool, no un int
+```
+```
+Error semántico: el operador '&&' no puede aplicarse a tipos 'int' e 'int'.
+Error semántico: el operador '!' no puede aplicarse al tipo 'int'.
+```
+
+---
+
+### Condición del `if` o `while` que no es booleana
+
+La condición entre paréntesis **siempre debe ser `bool`**. Un número o texto no es una condición válida.
+
+```cpp
+int valor = 10;
+if (valor) { ... }      // ERROR: valor es int, no bool
+
+string s = "hola";
+while (s) { ... }       // ERROR: s es string, no bool
+```
+```
+Error semántico: la condición del 'if' debe ser bool, pero es 'int'.
+Error semántico: la condición del 'while' debe ser bool, pero es 'string'.
+```
+
+Para corregirlo, usá una comparación que dé `bool`:
+```cpp
+if (valor > 0) { ... }     // OK: > produce bool
+while (s != "") { ... }    // OK: != produce bool
+```
+
+---
+
+### Errores en funciones
+
+```cpp
+// 'return' fuera de cualquier función
+return 42;
+// Error semántico: 'return' usado fuera de una función.
+
+// Función declarada como 'int' pero retorna texto
+int getDato() {
+    return "hola";
+}
+// Error semántico: tipo de retorno 'string' no es compatible con 'int'.
+
+// Función 'void' no puede retornar un valor
+void nada() {
+    return 1;
+}
+// Error semántico: función 'void' no puede retornar un valor.
+
+// Función no-void que no retorna nada
+int sinRetorno() {
+    return;
+}
+// Error semántico: función de tipo 'int' debe retornar un valor.
+```
+
+---
+
+### Ámbitos (scopes): variables que "viven" solo dentro de un bloque
+
+Cada par de llaves `{ }` crea un ámbito nuevo. Las variables declaradas adentro **no existen fuera**.
+
+```cpp
+int x = 1;          // scope global
+
+if (x > 0) {
+    int local = 5;  // existe solo dentro de este if
+    cout << local;  // OK
+}
+
+cout << local;      // ERROR: 'local' ya no existe aquí
+```
+
+Esto es correcto en el compilador porque la tabla de símbolos se "limpia" al salir de cada bloque.
+
+---
+
+## 6. Cómo se reportan los errores
+
+### El analizador no se detiene al primer error
+
+A diferencia de la fase léxica y sintáctica (que detienen el análisis cuando encuentran un error), el analizador semántico **acumula todos los errores** y los muestra al final.
+
+Esto es útil para el programador: en lugar de corregir un error, compilar, ver el siguiente, compilar de nuevo... ve todos los errores de una sola vez.
+
+Ejemplo con tres errores en el mismo archivo:
+```
+=== FASE 3: ANÁLISIS SEMÁNTICO ===
+
+  ❌ ERRORES SEMÁNTICOS (3):
+
+  [Línea 3:16]  Error semántico: variable 'z' no fue declarada.
+  [Línea 7:4]   Error semántico: variable 'x' ya fue declarada en este ámbito.
+  [Línea 11:5]  Error semántico: no se puede asignar tipo 'int' a variable de tipo 'bool'.
+```
+
+El formato de cada error muestra en qué línea y columna ocurre el problema.
+
+---
+
+### Por qué un error no genera errores "en cadena"
+
+Cuando una expresión ya produjo un error, el compilador no genera errores adicionales por esa misma causa. Internamente, la expresión queda marcada con el tipo especial `ERROR`.
+
+Ejemplo:
+```cpp
+string texto = "hola";
+int suma = texto + 5;       // Error: no se puede sumar string + int
+cout << suma + 1;           // suma está marcada como ERROR → no genera segundo error
+```
+
+Sin este mecanismo, el compilador generaría un error para cada uso de `suma`, llenando la pantalla de mensajes confusos. Con él, se reporta solo el error original.
+
+---
+
+## 7. Ejemplos de programas
+
+### Programa correcto (`ejemplo_semantico.txt`)
+
+```cpp
+int    entero  = 42;
+float  decimal = 3.14;
+bool   activo  = true;
+string nombre  = "Ana";
+
+// int → float está permitido (ampliación numérica)
+float f = 10;
+
+// Operaciones aritméticas
 int suma      = entero + 5;
-double mezcla = entero + preciso;  // int + double = double
+double mezcla = entero + 3.14;   // int + double = double
 
-// Condición booleana correcta
+// El if necesita una condición bool: entero > 10 produce bool
 if (entero > 10) {
     cout << entero;
 }
 
-// Operadores lógicos con bool
+// Operadores lógicos: && necesita dos bool
 bool rango = entero > 0 && entero < 100;
 
-// Scope: variable local solo visible dentro del bloque
+// Variable local: 'local' solo existe dentro del if
 if (entero > 0) {
     int local = entero * 2;
     cout << local;
 }
-// Aquí 'local' ya no existe
 
 // While con condición booleana
 int contador = 0;
@@ -422,180 +557,126 @@ while (contador < 10) {
     contador = contador + 1;
 }
 
-// NOT lógico
-bool inactivo = !activo;
+// Función: parámetros, cuerpo con return compatible
+int sumar(int a, int b) {
+    int c = a + b;
+    return c;
+}
+
+// Función void: puede hacer return; sin valor
+void imprimir(string msg) {
+    cout << msg;
+    return;
+}
 ```
 
 ### Programa con errores (`ejemplo_semantico_error.txt`)
 
-```cpp
-// ERROR 1 — Variable no declarada
-// 'z' no existe en ningún scope
-int resultado = z + 1;
-
-// ERROR 2 — Redeclaración en el mismo scope
-int x = 10;
-int x = 20;    // x ya fue declarada
-
-// ERROR 3 — Tipo incompatible en declaración
-// bool no acepta int
-bool activo = 42;
-
-// ERROR 4 — Tipo incompatible en asignación
-string nombre = "Juan";
-nombre = 99;   // string no acepta int
-
-// ERROR 5 — Aritmética con string
-string texto = "hola";
-int suma = texto + 5;  // string + int no es válido
-
-// ERROR 6 — Condición del if no es bool
-int valor = 10;
-if (valor) {   // se necesita bool, no int
-    cout << valor;
-}
-
-// ERROR 7 — Condición del while no es bool
-string s = "hola";
-while (s) {    // se necesita bool, no string
-    cout << s;
-}
-
-// ERROR 8 — Operador lógico con int en lugar de bool
-int a = 5;
-int b = 3;
-bool cond = a && b;   // && requiere bool && bool
-
-// ERROR 9 — Variable sin inicializar
-int sinValor;
-int uso = sinValor + 1;   // sinValor podría no estar inicializada
-
-// ERROR 10 — NOT sobre tipo no booleano
-int num = 5;
-bool negado = !num;   // ! requiere bool
-```
-
-Salida esperada:
-```
-=== FASE 3: ANÁLISIS SEMÁNTICO ===
-
-  ❌ ERRORES SEMÁNTICOS (10):
-
-  [Línea 15:16] Error semántico: variable 'z' no fue declarada.
-  [Línea 22:4]  Error semántico: variable 'x' ya fue declarada en este ámbito.
-  [Línea 28:5]  Error semántico: no se puede asignar tipo 'int' a variable de tipo 'bool' en la declaración de 'activo'.
-  [Línea 35:7]  Error semántico: no se puede asignar tipo 'int' a variable de tipo 'string' al asignar a 'nombre'.
-  [Línea 42:11] Error semántico: el operador '+' no puede aplicarse a tipos 'string' e 'int'.
-  [Línea 49:4]  Error semántico: la condición del 'if' debe ser bool, pero es 'int'.
-  [Línea 58:7]  Error semántico: la condición del 'while' debe ser bool, pero es 'string'.
-  [Línea 67:16] Error semántico: el operador '&&' no puede aplicarse a tipos 'int' e 'int'.
-  [Línea 75:10] Error semántico: variable 'sinValor' podría no estar inicializada.
-  [Línea 82:13] Error semántico: el operador '!' no puede aplicarse al tipo 'int'.
-```
+Ejecutá con `java -jar target/demo-1.0-jar-with-dependencies.jar ejemplo_semantico_error.txt` y vas a ver los 14 errores acumulados.
 
 ---
 
-## 8. Análisis sintáctico — reglas de la gramática
+## 8. Construcciones del lenguaje
 
-### Qué acepta el parser
+### Qué acepta el compilador
 
 | Construcción | Ejemplo |
 |---|---|
-| Declaración | `int x = 10;` |
+| Declaración de variable | `int x = 10;` |
+| Declaración sin valor | `int x;` |
 | Asignación | `x = x + 1;` |
-| Salida | `cout << x;` |
+| Salida por pantalla | `cout << x;` |
 | Condicional | `if (x > 0) { ... } else { ... }` |
 | Bucle | `while (x < 100) { ... }` |
-| Tipos | `int float double char string bool` |
+| Función | `int sumar(int a, int b) { return a + b; }` |
+| Retorno | `return expr;` o `return;` (para void) |
 
-### Precedencia de operadores (menor a mayor)
+### Tipos de datos
+
+| Tipo | Qué guarda | Ejemplo de declaración |
+|---|---|---|
+| `int` | Número entero | `int edad = 25;` |
+| `float` | Número decimal | `float precio = 9.99;` |
+| `double` | Decimal de alta precisión | `double pi = 3.14159265;` |
+| `char` | Un solo carácter | `char letra = 'A';` |
+| `string` | Texto | `string nombre = "Juan";` |
+| `bool` | Verdadero o falso | `bool activo = true;` |
+| `void` | Sin valor de retorno | Solo para funciones |
+
+### Precedencia de operadores
+
+Los operadores se evalúan en este orden (de menor a mayor prioridad):
 
 ```
-||                 (OR lógico)
-&&                 (AND lógico)
-== !=              (igualdad)
-< > <= >=          (relacional)
-+ -                (suma, resta)
-* / %              (multiplicación, división, módulo)
-! -(unario)        (unarios, mayor precedencia)
-( expr )           (agrupación)
-literal / ID       (átomos)
+||          → se evalúa último
+&&
+== !=
+< > <= >=
++ -
+* / %
+! -(unario) → se evalúa primero
 ```
 
-La precedencia se implementa por **orden de alternativas** en la regla `expresion` de ANTLR4: las alternativas listadas primero tienen menor precedencia.
+Esto significa que `2 + 3 * 4` es `14` (no `20`), porque `*` tiene mayor prioridad que `+`.
+Y que `a || b && c` es `a || (b && c)` (no `(a || b) && c`).
 
-### Ejemplos de errores sintácticos
+### Errores sintácticos comunes
 
 ```cpp
-int x = 10      // Error: falta ';'
-if (x > 0 {     // Error: falta ')'
-int z = x + ;   // Error: expresión incompleta
-entero a = 5;   // Error: 'entero' no es un tipo válido
+int x = 10        // Falta el ';' al final
+if (x > 0 {       // Falta el ')' antes de '{'
+int z = x + ;     // La expresión queda incompleta
+entero a = 5;     // 'entero' no es un tipo válido
 ```
 
 ---
 
-## 9. El patrón Visitor
+## 9. Cómo funciona el Visitor
 
-ANTLR4 genera la interfaz `MiLenguajeVisitor<T>`. El analizador semántico extiende `MiLenguajeBaseVisitor<String>`, donde el tipo `String` representa el **tipo inferido** de cada expresión.
+El analizador semántico usa el **patrón Visitor**: un objeto que recorre el árbol de parseo nodo por nodo y hace algo en cada uno.
 
-```java
-public class SemanticAnalyzer extends MiLenguajeBaseVisitor<String> {
+Funciona así: ANTLR4 construye el árbol del programa. El `SemanticAnalyzer` lo recorre, y por cada tipo de nodo llama al método correspondiente.
 
-    @Override
-    public String visitDeclaracion(MiLenguajeParser.DeclaracionContext ctx) {
-        String tipo   = ctx.tipo().getText();    // "int"
-        String nombre = ctx.ID().getText();       // "x"
-        String tipoExpr = visit(ctx.expresion()); // tipo de la parte derecha
-        // ... validar y registrar en tabla de símbolos
-        return null; // las sentencias no tienen tipo
-    }
+```
+Árbol de parseo:
+    declaracion
+    ├── tipo: "int"
+    ├── ID:   "x"
+    └── expresion: 5 + 3
+          ├── expresion: 5   (tipo: int)
+          └── expresion: 3   (tipo: int)
 
-    @Override
-    public String visitExprAditiva(MiLenguajeParser.ExprAditivaContext ctx) {
-        String izq = visit(ctx.expresion(0));  // tipo del operando izquierdo
-        String der = visit(ctx.expresion(1));  // tipo del operando derecho
-        return TypeSystem.inferirAritmetico(izq, der); // tipo del resultado
-    }
-}
+SemanticAnalyzer recorre el árbol:
+    visitDeclaracion()
+        → visita la expresion → devuelve "int"
+        → verifica: ¿"int" es compatible con "int"? → SI
+        → agrega x a la tabla de símbolos
 ```
 
-Convención de retorno:
-- **Sentencias** (`visitDeclaracion`, `visitSentenciaIf`, etc.) → retornan `null`
-- **Expresiones** (`visitExprAditiva`, `visitExprIdentificador`, etc.) → retornan el tipo inferido
+Convención del proyecto:
+- Los métodos que visitan **sentencias** (`visitDeclaracion`, `visitSentenciaIf`, etc.) devuelven `null` — las sentencias no tienen tipo.
+- Los métodos que visitan **expresiones** (`visitExprAditiva`, `visitExprIdentificador`, etc.) devuelven el tipo resultante como `String` — por ejemplo `"int"`, `"bool"`, `"double"`.
 
 ---
 
-## 10. Posibles mejoras futuras
+## 10. Posibles mejoras
 
-### Sintaxis adicional
-- [ ] Sentencia `for`: `for (int i = 0; i < 10; i = i + 1) { ... }`
-- [ ] Declaración y llamada de funciones con parámetros y tipo de retorno
-- [ ] Arrays y acceso por índice: `arr[i]`
-- [ ] Operador ternario: `x > 0 ? x : -x`
-- [ ] `break` y `continue` dentro de bucles
-- [ ] Operadores de incremento/decremento: `x++`, `x--`
+Estas funcionalidades no están implementadas y pueden ser un ejercicio de extensión:
 
-### Análisis semántico avanzado
-- [ ] Verificar que `return` sea compatible con el tipo de retorno de la función
-- [ ] Control de flujo: detectar código inalcanzable después de `return`
-- [ ] Inferencia de tipos para variables sin tipo explícito (`auto x = 5;`)
-- [ ] Constantes (`const int MAX = 100;`) que no pueden reasignarse
+**Sintaxis nueva**
+- Sentencia `for`: `for (int i = 0; i < 10; i = i + 1) { ... }`
+- Llamada a funciones: `int r = sumar(3, 4);`
+- Arrays: `int arr[5];` y acceso `arr[i]`
+- Operador ternario: `int max = a > b ? a : b;`
 
-### Árbol Sintáctico Abstracto (AST)
-- [ ] Construir un AST separado del árbol de parseo
-- [ ] El AST omite nodos no relevantes (paréntesis, puntos y coma, palabras clave)
-- [ ] Imprimir el AST de forma estructurada
+**Semántica más avanzada**
+- Detectar código inalcanzable después de un `return`
+- Constantes que no pueden reasignarse: `const int MAX = 100;`
+- Verificar que toda rama de una función con tipo de retorno efectivamente retorne un valor
 
-### Generación de código
-- [ ] Código intermedio de tres direcciones: `t1 = x + 5`
-- [ ] Bytecode para una máquina virtual simple
-- [ ] Traducción a C o Java
-
-### Optimizaciones
-- [ ] Plegado de constantes: `2 + 3` → `5` en tiempo de compilación
-- [ ] Eliminación de código muerto
-- [ ] Propagación de constantes
+**Generación de código**
+- Traducir el árbol a instrucciones de tres direcciones: `t1 = a + b`
+- Generar bytecode para una máquina virtual simple
 
 ---
 
@@ -609,8 +690,9 @@ Convención de retorno:
 | If | `if (expr_bool) { ... }` |
 | If-Else | `if (expr_bool) { ... } else { ... }` |
 | While | `while (expr_bool) { ... }` |
-| Bloque | `{ sentencia* }` |
-| Tipos | `int float double char string bool` |
+| Función | `tipo ID(tipo ID, ...) { ... }` |
+| Return | `return expr;` / `return;` |
+| Tipos | `int float double char string bool void` |
 | Literales | `42` `3.14` `'A'` `"hola"` `true` `false` |
 | Aritmética | `+ - * / %` |
 | Comparación | `== != > < >= <=` |
