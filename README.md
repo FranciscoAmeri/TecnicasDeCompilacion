@@ -237,7 +237,7 @@ Esto asegura que `2 + 3 * 4` se parsee como `2 + (3 * 4) = 14` y no como `(2 + 3
 
 ---
 
-## 4. Cómo funciona ANTLR4
+## 4. Cómo funciona
 
 ### El flujo de análisis
 
@@ -317,22 +317,11 @@ El Visitor se usa para:
 
 El programa usa `org.antlr.v4.gui.TreeViewer` de ANTLR4 para mostrar el árbol en una ventana Swing.
 
-```java
-TreeViewer viewer = new TreeViewer(
-    Arrays.asList(parser.getRuleNames()),
-    arbolParseo
-);
-viewer.setScale(1.5);  // zoom inicial
-```
 
 El `TreeViewer` necesita:
 - La lista de nombres de reglas del parser (para mostrar etiquetas como `declaracion`, `exprAditiva`)
 - El árbol de parseo devuelto por `parser.programa()`
 
-Para ajustar el zoom inicial, cambiá el valor en `App.java`:
-```java
-viewer.setScale(1.5);   // 1.0 = tamaño original, 2.0 = doble
-```
 
 ---
 
@@ -385,31 +374,12 @@ entero a = 5;   // <- ERROR: mismatched input 'entero'
 
 ## 8. Qué queda por implementar
 
-Este proyecto es un punto de partida. Las siguientes funcionalidades quedan como extensión:
-
 ### Sintaxis adicional
-- [ ] Sentencia `for`
+- [ ] Sentencia `for` `while` `etc`  
 - [ ] Declaración y llamada de funciones
 - [ ] Arrays y acceso por índice (`arr[i]`)
 - [ ] Operador ternario (`x > 0 ? x : -x`)
 
-### Análisis Semántico
-- [ ] Tabla de símbolos (registrar variables declaradas)
-- [ ] Verificación de tipos (`int` + `string` no es válido)
-- [ ] Control de ámbitos (variables locales vs globales)
-- [ ] Detección de variables no declaradas
-
-### Árbol Sintáctico Abstracto (AST)
-- [ ] Construir un AST separado del árbol de parseo
-- [ ] El AST omite nodos no relevantes (paréntesis, puntos y coma)
-
-### Generación de Código
-- [ ] Código intermedio (instrucciones de tres direcciones)
-- [ ] Código de máquina virtual (bytecode)
-
-### Optimizaciones
-- [ ] Plegado de constantes: `2 + 3` -> `5`
-- [ ] Eliminación de código muerto
 
 ---
 
@@ -446,44 +416,10 @@ Este proyecto es un punto de partida. Las siguientes funcionalidades quedan como
    }
    ```
 
-### Nivel 4 — Análisis semántico (avanzado)
-
-9. **Creá una tabla de símbolos** con `HashMap<String, String>` (nombre -> tipo).  
-   Populala al visitar cada `declaracion`.
-
-10. **Detectá variables no declaradas** al visitar `exprIdentificador`.
-
-11. **Verificá tipos en asignaciones**.  
-    Si `x` fue declarado como `int`, no debería poder asignarse `"hola"`.
-
----
 
 ## 10. Preguntas de comprensión
 
 1. ¿Cuál es la diferencia entre un **token** y una **regla de parser**?
 2. ¿Por qué las palabras clave (`int`, `while`) deben estar ANTES que `ID` en el lexer?
 3. ¿Cómo determina ANTLR4 la **precedencia de operadores** en la regla `expresion`?
-4. ¿Qué pasa si escribís `int 1variable = 5;`? ¿Es un error léxico o sintáctico?
-5. ¿Por qué `COMENTARIO_LINEA` usa `-> skip` en lugar de simplemente no hacer nada?
-6. ¿Qué diferencia hay entre el **árbol de parseo** y el **AST**?
-7. ¿Para qué sirve el patrón **Visitor**? ¿Por qué no modificar directamente el árbol?
-8. ¿Qué haría el compilador con `int x = "hola";`? ¿Lo detectaría en esta fase?
-
----
-
-## Referencia rápida de la gramática
-
-| Construcción     | Sintaxis                                    |
-|------------------|---------------------------------------------|
-| Declaración      | `tipo ID = expr;` o `tipo ID;`              |
-| Asignación       | `ID = expr;`                                |
-| Salida           | `cout << expr;`                             |
-| If               | `if (expr) { ... }`                         |
-| If-Else          | `if (expr) { ... } else { ... }`            |
-| While            | `while (expr) { ... }`                      |
-| Bloque           | `{ sentencia* }`                            |
-| Tipos válidos    | `int float double char string bool void`    |
-| Literales        | `42` `3.14` `'A'` `"hola"` `true` `false`  |
-| Operadores aritméticos | `+ - * / %`                         |
-| Operadores comparación | `== != > < >= <=`                   |
-| Operadores lógicos     | `&& \|\| !`                         |
+4. ¿Qué haría el compilador con `int x = "hola";`? ¿Lo detectaría en esta fase?
