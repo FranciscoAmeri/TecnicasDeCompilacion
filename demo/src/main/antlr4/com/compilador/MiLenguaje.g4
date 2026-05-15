@@ -40,11 +40,13 @@ programa
 // Una sentencia puede ser cualquiera de estos tipos.
 // ANTLR probará cada alternativa en orden hasta encontrar una que encaje.
 sentencia
-    : declaracion        // int x = 5;
+    : declaracionFuncion // int sumar(int a, int b) { ... }   — va ANTES de declaracion
+    | declaracion        // int x = 5;
     | asignacion         // x = x + 1;
     | sentenciaCout      // cout << x;
     | sentenciaIf        // if (x > 0) { ... }
     | sentenciaWhile     // while (x < 10) { ... }
+    | sentenciaReturn    // return expr;
     | bloque             // { ... }
     ;
 
@@ -103,6 +105,36 @@ sentenciaWhile
 // Ejemplo: { int x = 1; x = x + 1; cout << x; }
 bloque
     : LA sentencia* LC
+    ;
+
+// DECLARACIÓN DE FUNCIÓN: tipo nombre(params) { cuerpo }
+// El ? hace que la lista de parámetros sea opcional.
+// Ejemplos:
+//   int sumar(int a, int b) { return a + b; }
+//   void imprimir(string msg) { cout << msg; }
+//   int getConstante() { return 42; }
+declaracionFuncion
+    : tipo ID PA listaParametros? PC bloque
+    ;
+
+// LISTA DE PARÁMETROS: uno o más parámetros separados por coma
+// Ejemplo: int a, float b, bool flag
+listaParametros
+    : parametro (COMA parametro)*
+    ;
+
+// PARÁMETRO INDIVIDUAL: tipo nombre
+// Ejemplo: int a
+parametro
+    : tipo ID
+    ;
+
+// SENTENCIA RETURN: devuelve el control (y opcionalmente un valor)
+// Ejemplos:
+//   return x + 1;   <- con valor
+//   return;         <- sin valor (para void)
+sentenciaReturn
+    : RETURN expresion? PYC
     ;
 
 

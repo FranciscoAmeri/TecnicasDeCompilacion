@@ -3,6 +3,8 @@ package com.compilador;
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.*;
 import org.antlr.v4.gui.TreeViewer;
+import com.compilador.semantico.SemanticAnalyzer;
+import com.compilador.semantico.SemanticError;
 import javax.swing.*;
 import java.util.Arrays;
 import java.io.IOException;
@@ -12,10 +14,10 @@ import java.util.List;
 /**
  * Punto de entrada del compilador educativo.
  *
- * Este programa realiza DOS fases del análisis:
- *   1. ANÁLISIS LÉXICO  — convierte el texto en tokens
- *   2. ANÁLISIS SINTÁCTICO — verifica que los tokens forman
- *      estructuras válidas según la gramática
+ * Este programa realiza TRES fases del análisis:
+ *   1. ANÁLISIS LÉXICO     — convierte el texto en tokens
+ *   2. ANÁLISIS SINTÁCTICO — verifica la estructura (gramática)
+ *   3. ANÁLISIS SEMÁNTICO  — verifica el significado (tipos, scopes)
  *
  * Para ejecutar:
  *   java -jar demo-1.0-jar-with-dependencies.jar <archivo.txt>
@@ -170,18 +172,45 @@ public class App {
 
             System.out.println("  ✅ Análisis sintáctico completado sin errores.");
 
-            System.out.println("\n" + "=".repeat(65));
-            System.out.println("  Compilacion exitosa.");
+            // =========================================================
+            //  FASE 3: ANÁLISIS SEMÁNTICO
+            //
+            //  El analizador semántico recorre el árbol de parseo y
+            //  verifica que el programa tenga SENTIDO:
+            //    - Variables declaradas antes de usarse
+            //    - Tipos compatibles en asignaciones y expresiones
+            //    - Condiciones booleanas en if/while
+            //    - Sin redeclaraciones en el mismo scope
+            //
+            //  Los errores se ACUMULAN (no detienen el análisis),
+            //  permitiendo reportar múltiples errores en una sola pasada.
+            // =========================================================
+
+            System.out.println("\n=== FASE 3: ANÁLISIS SEMÁNTICO ===\n");
+
+            SemanticAnalyzer semantico = new SemanticAnalyzer();
+            semantico.visit(arbolParseo);
+
+            if (semantico.hayErrores()) {
+                System.out.println("  ❌ ERRORES SEMÁNTICOS ("
+                                   + semantico.getErrores().size() + "):\n");
+                for (SemanticError error : semantico.getErrores()) {
+                    System.out.println("  " + error);
+                }
+                System.out.println();
+                // Mostrar tabla de símbolos igual, para ayudar a depurar
+                semantico.getTablaSimbolos().imprimirTabla();
+                System.out.println("\n" + "=".repeat(65));
+                System.out.println("  Compilacion finalizada con errores semanticos.");
+            } else {
+                System.out.println("  ✅ Análisis semántico completado sin errores.");
+                semantico.getTablaSimbolos().imprimirTabla();
+                System.out.println("\n" + "=".repeat(65));
+                System.out.println("  Compilacion exitosa.");
+            }
 
             // =========================================================
             //  VISUALIZADOR GRÁFICO (Swing)
-            //
-            //  TreeViewer es la herramienta de depuración incluida en
-            //  ANTLR4. Abre una ventana Swing con el árbol de parseo
-            //  completo, interactivo y con zoom.
-            //
-            //  Se muestra DESPUÉS de la salida en consola para que
-            //  el alumno pueda leer primero la salida de texto.
             // =========================================================
 
             System.out.println("\n  Abriendo visualizador grafico del arbol...");
