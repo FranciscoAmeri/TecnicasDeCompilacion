@@ -19,10 +19,17 @@
     </properties>
 
     <dependencies>
-        <!-- ANTLR para análisis léxico y sintáctico -->
+        <!-- ANTLR runtime: clases base para el lexer y el parser generados -->
         <dependency>
             <groupId>org.antlr</groupId>
             <artifactId>antlr4-runtime</artifactId>
+            <version>${antlr.version}</version>
+        </dependency>
+
+        <!-- ANTLR completo: incluye TreeViewer (visualizador gráfico Swing) -->
+        <dependency>
+            <groupId>org.antlr</groupId>
+            <artifactId>antlr4</artifactId>
             <version>${antlr.version}</version>
         </dependency>
         

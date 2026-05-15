@@ -1,358 +1,489 @@
-# 🚀 Compilador TC25 - Proyecto de Técnicas de Compilación
+# Compilador Educativo — Mini Lenguaje C++
 
-## ⚙️ Configuración Inicial del Proyecto
+Proyecto de Técnicas de Compilación.  
+Implementa las dos primeras fases de un compilador: **análisis léxico** y **análisis sintáctico**.
 
-### 🏗️ Creación del Proyecto Maven
-Para desarrollar nuestro compilador, comenzamos creando la estructura básica del proyecto con Maven, que facilitará la gestión de dependencias y el ciclo de vida de construcción.
+---
+
+## Estructura del proyecto
+
+```
+demo/
+├── src/main/antlr4/com/compilador/
+│   └── MiLenguaje.g4          <- gramática ANTLR4 (lexer + parser)
+├── src/main/java/com/compilador/
+│   ├── App.java                <- punto de entrada
+│   └── ImprimirVisitor.java    <- visitor educativo
+├── ejemplo.txt                 <- programa válido de prueba
+├── ejemplo_error.txt           <- programa con errores sintácticos
+└── pom.xml                     <- configuración Maven
+```
+
+Archivos **generados automáticamente** por ANTLR4 (no editarlos):
+```
+src/main/java/com/compilador/
+├── MiLenguajeLexer.java
+├── MiLenguajeParser.java
+├── MiLenguajeVisitor.java
+└── MiLenguajeBaseVisitor.java
+```
+
+---
+
+## Cómo compilar y ejecutar
 
 ```bash
-mvn org.apache.maven.plugins:maven-archetype-plugin:3.1.2:generate \
-    -DarchetypeArtifactId="maven-archetype-quickstart" \
-    -DarchetypeGroupId="org.apache.maven.archetypes" \
-    -DarchetypeVersion="1.4" \
-    -DgroupId="com.compilador" \
-    -DartifactId="demo"
-```
-
-### 🔧 Configuraciones durante la ejecución:
-
-- 📦 `groupId`: `com.compilador`  
-- 📂 `artifactId`: `demo`  
-- 🔢 `version`: `1.0`  
-- 📁 `package`: `com.compilador`  
-
-Esto genera la siguiente estructura de directorios:
-
-```
-📁 demo/
-├── 📜 pom.xml
-├── 📂 src/
-│   ├── 📂 main/
-│   │   └── 📂 java/
-│   │       └── 📂 com/
-│   │           └── 📂 compilador/
-│   │               └── 📄 App.java
-│   └── 📂 test/
-│       └── 📂 java/
-│           └── 📂 com/
-│               └── 📂 compilador/
-│                   └── 📄 AppTest.java
-```
-
----
-
-## 🛠️ Configuración de ANTLR para el Análisis Léxico
-
-### 1️⃣ Modificación del `pom.xml`
-
-Añadimos las siguientes dependencias y plugins:
-
-```xml
-<properties>
-  <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-  <maven.compiler.source>1.8</maven.compiler.source>
-  <maven.compiler.target>1.8</maven.compiler.target>
-  <antlr.version>4.9.3</antlr.version>
-</properties>
-
-<dependencies>
-  <dependency>
-    <groupId>org.antlr</groupId>
-    <artifactId>antlr4-runtime</artifactId>
-    <version>${antlr.version}</version>
-  </dependency>
-</dependencies>
-
-<build>
-  <plugins>
-    <plugin>
-      <groupId>org.antlr</groupId>
-      <artifactId>antlr4-maven-plugin</artifactId>
-      <version>${antlr.version}</version>
-      <executions>
-        <execution>
-          <goals>
-            <goal>antlr4</goal>
-          </goals>
-        </execution>
-      </executions>
-      <configuration>
-        <sourceDirectory>${basedir}/src/main/antlr4</sourceDirectory>
-        <outputDirectory>${basedir}/src/main/java</outputDirectory>
-        <visitor>true</visitor>
-        <listener>true</listener>
-      </configuration>
-    </plugin>
-    
-    <plugin>
-      <artifactId>maven-assembly-plugin</artifactId>
-      <configuration>
-        <archive>
-          <manifest>
-            <mainClass>com.compilador.App</mainClass>
-          </manifest>
-        </archive>
-        <descriptorRefs>
-          <descriptorRef>jar-with-dependencies</descriptorRef>
-        </descriptorRefs>
-      </configuration>
-      <executions>
-        <execution>
-          <id>make-assembly</id>
-          <phase>package</phase>
-          <goals>
-            <goal>single</goal>
-          </goals>
-        </execution>
-      </executions>
-    </plugin>
-  </plugins>
-</build>
-```
-
----
-
-### 2️⃣ Crear estructura para archivos ANTLR
-
-```bash
-mkdir -p src/main/antlr4/com/compilador
-```
-
----
-
-### 3️⃣ Crear archivo de gramática `MiniLenguaje.g4`
-
-```antlr
-grammar MiniLenguaje;
-
-program : token* EOF ;
-token   : ID | INTEGER | STRING | KEYWORD | OPERATOR | SEPARATOR ;
-
-ID          : [a-zA-Z][a-zA-Z0-9_]* ;
-INTEGER     : [0-9]+ ;
-STRING      : '"' (~["\r\n] | '\"')* '"' ;
-BOOLEAN     : 'true' | 'false' ;
-
-KEYWORD     : 'var' | 'if' | 'else' | 'print' | 'while' | 'function' | 'return' ;
-
-OPERATOR    : '+' | '-' | '*' | '/' | '%' | '=' | '==' | '!=' | '<' | '>' | '<=' | '>=' | '&&' | '||' | '!' ;
-
-SEPARATOR   : ';' | '(' | ')' | '{' | '}' | ',' | '.' ;
-
-WS          : [ \t\r\n]+ -> skip ;
-COMMENT     : '//' ~[\r\n]* -> skip ;
-BLOCK_COMMENT : '/*' .*? '*/' -> skip ;
-```
-
----
-
-## 📊 Gramática Léxica Mejorada
-
-```antlr
-grammar MiLenguaje;
-
-programa : (token)* EOF ;
-
-token : PA | PC | CA | CC | LA | LC | PYC | COMA | IGUAL | MAYOR | MAYOR_IGUAL 
-      | MENOR | MENOR_IGUAL | EQL | DISTINTO | SUM | RES | MUL | DIV | MOD
-      | OR | AND | NOT | FOR | WHILE | IF | ELSE | INT | CHAR | DOUBLE | VOID
-      | RETURN | ID | INTEGER | DECIMAL | CHARACTER | OTRO ;
-
-fragment LETRA : [A-Za-z];
-fragment DIGITO : [0-9];
-
-PA   : '(' ;
-PC   : ')' ;
-CA   : '[' ;
-CC   : ']' ;
-LA   : '{' ;
-LC   : '}' ;
-
-PYC  : ';' ;
-COMA : ',' ;
-
-IGUAL : '=' ;
-
-MAYOR  : '>' ;
-MAYOR_IGUAL: '>=' ;
-MENOR  : '<' ;
-MENOR_IGUAL: '<=' ;
-EQL  : '==' ;
-DISTINTO  : '!=' ;
-
-SUM  : '+' ;
-RES  : '-' ;
-MUL  : '*' ;
-DIV  : '/' ;
-MOD  : '%' ;
-
-OR   : '||' ;
-AND  : '&&' ;
-NOT  : '!' ;
-
-FOR  : 'for' ;
-WHILE: 'while' ;
-
-IF   : 'if' ;
-ELSE : 'else' ;
-
-INT     : 'int' ;
-CHAR    : 'char' ;
-DOUBLE  : 'double' ;
-VOID    : 'void' ;
-
-RETURN : 'return' ;
-
-ID : (LETRA | '_') (LETRA | DIGITO | '_')* ;
-
-INTEGER : DIGITO+ ;
-DECIMAL : INTEGER '.' INTEGER ;
-CHARACTER: '\'' (~['\r\n] | '\\' .) '\'' ;
-
-COMENTARIO_LINEA : '//' ~[\r\n]* -> skip ;
-COMENTARIO_BLOQUE : '/*' .*? '*/' -> skip ;
-
-WS : [ \r\n\t] -> skip ;
-OTRO : . ;
-```
-
----
-
-## 💡 Características añadidas
-
-- 🔡 Soporte para literales de tipo decimal
-- 📝 Soporte para caracteres con comillas simples
-- 🔄 Operadores de comparación extendidos
-- 🧮 Operadores lógicos (`&&`, `||`)
-- 📌 Nuevas palabras clave: `VOID`, `INT`, `CHAR`, `DOUBLE`, `RETURN`
-- 💬 Manejo completo de comentarios
-
----
-
-## 📝 Ejemplo Actualizado
-
-### 📌 Código de entrada
-
-```java
-// Variables con diferentes tipos de datos
-int numero = 42;
-double pi = 3.14159;
-String mensaje = "Hola, mundo!";
-char letra = 'A';
-boolean condicion = true;
-
-// Estructura de control if-else
-if (numero > 10) {
-    System.out.println(mensaje);
-} else {
-    System.out.println("Número pequeo");
-}
-```
-
-### 📊 Salida del Análisis Léxico
-
-```
-Análisis léxico completado.
-SEPARATOR            (                              5          3
-ID                   x                              5          4
-OPERATOR             >                              5          6
-INTEGER              5                              5          8
-SEPARATOR            )                              5          9
-SEPARATOR            {                              5          11
-ID                   print                          6          4
-ID                   mensaje                        6          10
-SEPARATOR            ;                              6          17
-SEPARATOR            }                              7          0
-
-Análisis léxico completado.
-```
-
----
-
-## 🚀 ¡Hora de Compilar y Ejecutar!
-
-### 📦 Compilar el proyecto
-
-```bash
+# 1. Compilar todo (genera el lexer/parser de ANTLR y compila Java)
+cd demo
 mvn clean package
-```
 
-### ▶️ Ejecutar el compilador
+# 2. Ejecutar con el programa de ejemplo válido
+java -jar target/demo-1.0-jar-with-dependencies.jar ejemplo.txt
 
-```bash
-mvn package assembly:single
-java -jar target/demo-1.0-jar-with-dependencies.jar ejemplo.txt   
+# 3. Ejecutar con el programa de ejemplo con errores
 java -jar target/demo-1.0-jar-with-dependencies.jar ejemplo_error.txt
 ```
 
+---
 
-## 📤 Salida por Consola del Análisis Léxico
+## Salida del programa
+
+Al ejecutarse con un archivo válido, el programa produce:
+
+### En consola
 
 ```
 Analizando archivo: ejemplo.txt
+=================================================================
 
-=== ANÁLISIS LÉXICO ===
-TIPO                 LEXEMA                         LÍNEA      COLUMNA   
--------------------------------------------------------------------
-INT                  int                            3          0
-ID                   numero                         3          4
-IGUAL                =                              3          11
-INTEGER              42                             3          13
-PYC                  ;                              3          15
-DOUBLE               double                         4          0
-ID                   pi                             4          7
-IGUAL                =                              4          10
-DECIMAL              3.14159                        4          12
-PYC                  ;                              4          19
-ID                   String                         5          0
-ID                   mensaje                        5          7
-IGUAL                =                              5          15
-HOLA_MUNDO           "Hola, mundo!"                 5          17
-PYC                  ;                              5          31
-CHAR                 char                           6          0
-ID                   letra                          6          5
-IGUAL                =                              6          11        
-CHARACTER            'A'                            6          13
-PYC                  ;                              6          16
-ID                   boolean                        7          0
-ID                   condicion                      7          8
-IGUAL                =                              7          18
-ID                   true                           7          20
-PYC                  ;                              7          24
-IF                   if                             10         0
-PA                   (                              10         3
-ID                   numero                         10         4
-MAYOR                >                              10         11
-INTEGER              10                             10         13
-PC                   )                              10         15        
-LA                   {                              10         17
-ID                   System                         11         4
-OTRO                 .                              11         10
-ID                   out                            11         11
-OTRO                 .                              11         14
-ID                   println                        11         15
-PA                   (                              11         22
-ID                   mensaje                        11         23
-PC                   )                              11         30
-PYC                  ;                              11         31
-LC                   }                              12         0
-ELSE                 else                           12         2
-LA                   {                              12         7
-ID                   System                         13         4
-OTRO                 .                              13         10
-ID                   out                            13         11
-OTRO                 .                              13         14
-ID                   println                        13         15
-PA                   (                              13         22
-OTRO                 "                              13         23
-ID                   N                              13         24
-OTRO                 ú                              13         25
-ID                   mero                           13         26
-ID                   pequeo                         13         31
-OTRO                 "                              13         37
-PC                   )                              13         38
-PYC                  ;                              13         39
-LC                   }                              14         0
+=== FASE 1: ANÁLISIS LÉXICO ===
 
-? Análisis léxico completado sin errores.
+  TIPO DE TOKEN        LEXEMA                    LÍNEA    COLUMNA
+  ---------------------------------------------------------------
+  INT                  int                       1        0
+  ID                   x                         1        4
+  IGUAL                =                         1        6
+  INTEGER              10                        1        8
+  PYC                  ;                         1        10
+  ...
+
+  Análisis léxico completado sin errores.
+
+=== FASE 2: ANÁLISIS SINTÁCTICO ===
+
+  Análisis sintáctico completado sin errores.
+
+=================================================================
+  Compilacion exitosa.
+
+  Abriendo visualizador grafico del arbol...
 ```
+
+### Ventana gráfica (Swing)
+
+Se abre automáticamente una ventana con el árbol de parseo completo, generada con `TreeViewer` de ANTLR4.
+
+```
++---------------------------+
+|  Árbol de Parseo          |
+|                           |
+|       programa            |
+|      /   |   \            |
+| decl  asig  while         |
+|  ...   ...   ...          |
++---------------------------+
+```
+
+La ventana soporta zoom y scroll para navegar árboles grandes.
+
+---
+
+---
+
+# Guía educativa — Análisis Sintáctico
+
+---
+
+## 1. ¿Qué es el análisis sintáctico?
+
+El **análisis léxico** convierte el texto en tokens (palabras).  
+El **análisis sintáctico** verifica que esas palabras forman **frases con sentido**.
+
+Analogía con el lenguaje natural:
+
+```
+Frase:  "El gato come pescado"   -> estructura válida
+Frase:  "Gato el pescado come"   -> palabras correctas, estructura inválida
+```
+
+En programación:
+
+```
+int x = 5;          -> tokens válidos, estructura válida      OK
+int = x 5;          -> tokens válidos, estructura inválida    ERROR
+```
+
+El análisis sintáctico NO verifica el significado (eso es análisis semántico).  
+Solo verifica que la **estructura** respeta las reglas de la gramática.
+
+---
+
+## 2. ¿Qué hace esta gramática?
+
+Este proyecto implementa un **mini lenguaje inspirado en C++** con:
+
+| Construcción         | Ejemplo                           |
+|----------------------|-----------------------------------|
+| Declaración          | `int x = 10;`                     |
+| Asignación           | `x = x + 1;`                      |
+| Salida               | `cout << x;`                      |
+| Condicional          | `if (x > 0) { ... } else { ... }` |
+| Bucle                | `while (x < 100) { ... }`         |
+| Expresiones          | `(x + y) * 2`                     |
+| Tipos                | `int float double char string bool`|
+
+### Programa de ejemplo
+
+```cpp
+int x = 10;
+int y = 20;
+
+x = x + y;
+
+if (x > 10) {
+    cout << x;
+}
+
+while (x < 100) {
+    x = x + 1;
+}
+```
+
+---
+
+## 3. Explicación de las reglas de la gramática
+
+El archivo `MiLenguaje.g4` contiene dos tipos de reglas:
+
+- **Reglas del parser** (en minúscula): definen la estructura
+- **Reglas del lexer** (en MAYÚSCULA): definen los tokens
+
+### 3.1 Regla `programa`
+
+```antlr4
+programa : sentencia* EOF ;
+```
+
+Un programa es **cero o más sentencias** seguidas del fin del archivo.  
+El `*` significa "cero o más veces" (como las expresiones regulares).
+
+### 3.2 Regla `sentencia`
+
+```antlr4
+sentencia
+    : declaracion
+    | asignacion
+    | sentenciaCout
+    | sentenciaIf
+    | sentenciaWhile
+    | bloque
+    ;
+```
+
+El `|` significa **alternativa** (OR). Una sentencia puede ser cualquiera de esos tipos.  
+ANTLR prueba cada alternativa en orden hasta encontrar una que coincida.
+
+### 3.3 Regla `declaracion`
+
+```antlr4
+declaracion : tipo ID (IGUAL expresion)? PYC ;
+```
+
+- `tipo` → palabra clave de tipo (`int`, `float`, etc.)
+- `ID` → nombre de la variable
+- `(IGUAL expresion)?` → valor inicial **opcional** (el `?` significa 0 o 1 vez)
+- `PYC` → punto y coma obligatorio
+
+Ejemplos válidos:
+```cpp
+int x;          // sin valor inicial
+int x = 5;      // con valor inicial
+float pi = 3.14;
+```
+
+### 3.4 Regla `expresion` y precedencia de operadores
+
+```antlr4
+expresion
+    : expresion OR expresion            // Nivel 6: menor precedencia
+    | expresion AND expresion           // Nivel 5
+    | expresion (EQL | DISTINTO) expresion   // Nivel 4
+    | expresion (MAYOR | MENOR | ...) expresion  // Nivel 3
+    | expresion (SUM | RES) expresion   // Nivel 2
+    | expresion (MUL | DIV | MOD) expresion  // Nivel 1
+    | NOT expresion                     // Unarios
+    | RES expresion
+    | PA expresion PC                   // Paréntesis
+    | INTEGER                           // Literales
+    | ID                                // Variables
+    ;
+```
+
+**La precedencia en ANTLR4 se define por el ORDEN:**  
+Las alternativas más arriba tienen **menor precedencia** (se evalúan al final).  
+Las más abajo tienen **mayor precedencia** (se evalúan primero).
+
+Esto asegura que `2 + 3 * 4` se parsee como `2 + (3 * 4) = 14` y no como `(2 + 3) * 4 = 20`.
+
+---
+
+## 4. Cómo funciona ANTLR4
+
+### El flujo de análisis
+
+```
+Texto fuente
+     |
+     v
++---------+       tokens        +---------+      árbol de parseo
+|  LEXER  | ------------------> | PARSER  | -------------------->
++---------+                     +---------+           |
+     |                               |                v
+     | MiLenguajeLexer.java          | MiLenguajeParser.java
+     | (generado por ANTLR4)         | (generado por ANTLR4)     TreeViewer (GUI)
+```
+
+### El Lexer
+
+El **Lexer** (analizador léxico) lee el texto carácter por carácter y lo convierte en **tokens**.
+
+```
+"int x = 5 + 3 ;"
+  ---  -   -  -  -  -   -
+  INT  ID  =  5  +  3   ;
+
+ -> [INT] [ID:"x"] [IGUAL] [INTEGER:"5"] [SUM] [INTEGER:"3"] [PYC]
+```
+
+**Reglas del lexer en ANTLR4:**
+- Si dos reglas pueden coincidir, gana la que coincide con el texto **más largo**
+- Si coinciden con el mismo largo, gana la que aparece **primero** en el archivo
+- Por eso las palabras clave (`int`, `while`) van ANTES que `ID` en la gramática
+
+### El Parser
+
+El **Parser** (analizador sintáctico) toma la secuencia de tokens y verifica que forman una estructura válida según la gramática.
+
+Si la estructura es válida, construye un **Árbol de Parseo** (Parse Tree).
+
+### El Árbol de Parseo
+
+El árbol tiene:
+- **Nodos internos**: reglas del parser (como `programa`, `sentencia`, `expresion`)
+- **Hojas**: tokens del lexer (como `INT`, `ID`, `INTEGER`, `PYC`)
+
+El árbol se visualiza automáticamente en la **ventana gráfica** al ejecutar el compilador.
+
+---
+
+## 5. El patrón Visitor
+
+ANTLR4 genera una interfaz `MiLenguajeVisitor<T>` con un método por cada regla.  
+Extendemos `MiLenguajeBaseVisitor<T>` y sobreescribimos los métodos que nos interesan.
+
+```java
+public class MiVisitor extends MiLenguajeBaseVisitor<String> {
+
+    @Override
+    public String visitDeclaracion(MiLenguajeParser.DeclaracionContext ctx) {
+        // ctx da acceso a todos los hijos del nodo
+        String tipo  = ctx.tipo().getText();    // "int"
+        String nombre = ctx.ID().getText();      // "x"
+        // ...
+        return visitChildren(ctx);
+    }
+}
+```
+
+El Visitor se usa para:
+- **Imprimir** el árbol (como hace `ImprimirVisitor.java`)
+- **Construir** un AST (Árbol Sintáctico Abstracto)
+- **Analizar** tipos y ámbitos (análisis semántico)
+- **Generar** código intermedio o final
+
+---
+
+## 6. Visualizador gráfico (TreeViewer)
+
+El programa usa `org.antlr.v4.gui.TreeViewer` de ANTLR4 para mostrar el árbol en una ventana Swing.
+
+```java
+TreeViewer viewer = new TreeViewer(
+    Arrays.asList(parser.getRuleNames()),
+    arbolParseo
+);
+viewer.setScale(1.5);  // zoom inicial
+```
+
+El `TreeViewer` necesita:
+- La lista de nombres de reglas del parser (para mostrar etiquetas como `declaracion`, `exprAditiva`)
+- El árbol de parseo devuelto por `parser.programa()`
+
+Para ajustar el zoom inicial, cambiá el valor en `App.java`:
+```java
+viewer.setScale(1.5);   // 1.0 = tamaño original, 2.0 = doble
+```
+
+---
+
+## 7. Ejemplos prácticos
+
+### Programa válido
+
+```cpp
+int x = 10;
+int y = 20;
+x = x + y;
+
+if (x > 10) {
+    cout << x;
+} else {
+    cout << y;
+}
+
+while (x < 100) {
+    x = x + 1;
+}
+```
+
+### Programas inválidos y sus errores
+
+```cpp
+// Error 1: falta el ';'
+int x = 10      // <- ERROR: missing ';' at 'int'
+int y = 20;
+```
+
+```cpp
+// Error 2: paréntesis sin cerrar en if
+if (x > 0 {     // <- ERROR: missing ')' at '{'
+    cout << x;
+}
+```
+
+```cpp
+// Error 3: expresión incompleta
+int z = x + ;   // <- ERROR: mismatched input ';'
+```
+
+```cpp
+// Error 4: tipo desconocido
+entero a = 5;   // <- ERROR: mismatched input 'entero'
+```
+
+---
+
+## 8. Qué queda por implementar
+
+Este proyecto es un punto de partida. Las siguientes funcionalidades quedan como extensión:
+
+### Sintaxis adicional
+- [ ] Sentencia `for`
+- [ ] Declaración y llamada de funciones
+- [ ] Arrays y acceso por índice (`arr[i]`)
+- [ ] Operador ternario (`x > 0 ? x : -x`)
+
+### Análisis Semántico
+- [ ] Tabla de símbolos (registrar variables declaradas)
+- [ ] Verificación de tipos (`int` + `string` no es válido)
+- [ ] Control de ámbitos (variables locales vs globales)
+- [ ] Detección de variables no declaradas
+
+### Árbol Sintáctico Abstracto (AST)
+- [ ] Construir un AST separado del árbol de parseo
+- [ ] El AST omite nodos no relevantes (paréntesis, puntos y coma)
+
+### Generación de Código
+- [ ] Código intermedio (instrucciones de tres direcciones)
+- [ ] Código de máquina virtual (bytecode)
+
+### Optimizaciones
+- [ ] Plegado de constantes: `2 + 3` -> `5`
+- [ ] Eliminación de código muerto
+
+---
+
+## 9. Ejercicios propuestos
+
+### Nivel 1 — Familiarización
+
+1. Ejecutá el compilador con `ejemplo.txt` y observá la consola y la ventana gráfica.
+2. Introducí errores en `ejemplo.txt` (quitá un `;`, un `)`, una `}`) y observá los mensajes.
+3. Agregá una variable `string saludo = "Hola mundo";` y verificá que compila.
+
+### Nivel 2 — Modificar la gramática
+
+4. **Agregá el tipo `long`** como tipo de dato válido (solo en `MiLenguaje.g4`).
+5. **Agregá `cout <<` con múltiples valores** separados por `<<`:  
+   `cout << x << y << z;`  
+   Pista: modificá la regla `sentenciaCout`.
+6. **Agregá el operador `+=`**:  
+   `x += 5;` equivale a `x = x + 5;`
+
+### Nivel 3 — Extender el lenguaje
+
+7. **Agregá la sentencia `for`:**
+   ```cpp
+   for (int i = 0; i < 10; i = i + 1) {
+       cout << i;
+   }
+   ```
+
+8. **Agregá funciones sin parámetros:**
+   ```cpp
+   void saludar() {
+       cout << "Hola";
+   }
+   ```
+
+### Nivel 4 — Análisis semántico (avanzado)
+
+9. **Creá una tabla de símbolos** con `HashMap<String, String>` (nombre -> tipo).  
+   Populala al visitar cada `declaracion`.
+
+10. **Detectá variables no declaradas** al visitar `exprIdentificador`.
+
+11. **Verificá tipos en asignaciones**.  
+    Si `x` fue declarado como `int`, no debería poder asignarse `"hola"`.
+
+---
+
+## 10. Preguntas de comprensión
+
+1. ¿Cuál es la diferencia entre un **token** y una **regla de parser**?
+2. ¿Por qué las palabras clave (`int`, `while`) deben estar ANTES que `ID` en el lexer?
+3. ¿Cómo determina ANTLR4 la **precedencia de operadores** en la regla `expresion`?
+4. ¿Qué pasa si escribís `int 1variable = 5;`? ¿Es un error léxico o sintáctico?
+5. ¿Por qué `COMENTARIO_LINEA` usa `-> skip` en lugar de simplemente no hacer nada?
+6. ¿Qué diferencia hay entre el **árbol de parseo** y el **AST**?
+7. ¿Para qué sirve el patrón **Visitor**? ¿Por qué no modificar directamente el árbol?
+8. ¿Qué haría el compilador con `int x = "hola";`? ¿Lo detectaría en esta fase?
+
+---
+
+## Referencia rápida de la gramática
+
+| Construcción     | Sintaxis                                    |
+|------------------|---------------------------------------------|
+| Declaración      | `tipo ID = expr;` o `tipo ID;`              |
+| Asignación       | `ID = expr;`                                |
+| Salida           | `cout << expr;`                             |
+| If               | `if (expr) { ... }`                         |
+| If-Else          | `if (expr) { ... } else { ... }`            |
+| While            | `while (expr) { ... }`                      |
+| Bloque           | `{ sentencia* }`                            |
+| Tipos válidos    | `int float double char string bool void`    |
+| Literales        | `42` `3.14` `'A'` `"hola"` `true` `false`  |
+| Operadores aritméticos | `+ - * / %`                         |
+| Operadores comparación | `== != > < >= <=`                   |
+| Operadores lógicos     | `&& \|\| !`                         |

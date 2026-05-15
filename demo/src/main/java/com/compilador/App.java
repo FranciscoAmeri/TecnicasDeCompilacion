@@ -2,6 +2,9 @@ package com.compilador;
 
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.*;
+import org.antlr.v4.gui.TreeViewer;
+import javax.swing.*;
+import java.util.Arrays;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -167,43 +170,22 @@ public class App {
 
             System.out.println("  ✅ Análisis sintáctico completado sin errores.");
 
-            // =========================================================
-            //  ÁRBOL DE PARSEO en formato LISP
-            //
-            //  ANTLR puede representar el árbol de parseo como texto
-            //  usando la notación de listas anidadas de LISP.
-            //
-            //  Ejemplo: (programa (sentencia (declaracion int x = 10 ;)))
-            //
-            //  Cada paréntesis representa un nodo del árbol.
-            //  El primer elemento es la regla, el resto son los hijos.
-            // =========================================================
-
-            System.out.println("\n--- Árbol de Parseo (formato LISP) ---\n");
-            // toStringTree muestra el árbol usando los nombres de las reglas
-            System.out.println("  " + arbolParseo.toStringTree(parser));
-
-            // =========================================================
-            //  RECORRIDO CON VISITOR
-            //
-            //  El patrón VISITOR permite "visitar" cada nodo del árbol
-            //  de parseo y ejecutar código específico para cada tipo.
-            //
-            //  Aquí usamos ImprimirVisitor para mostrar la estructura
-            //  del árbol de forma legible.
-            //
-            //  En compiladores reales, los visitors se usan para:
-            //    - Construir el AST (Árbol Sintáctico Abstracto)
-            //    - Hacer análisis semántico (tipos, ámbitos)
-            //    - Generar código
-            // =========================================================
-
-            System.out.println("\n--- Árbol de Parseo (recorrido con Visitor) ---\n");
-            ImprimirVisitor visitor = new ImprimirVisitor();
-            visitor.visit(arbolParseo);
-
             System.out.println("\n" + "=".repeat(65));
-            System.out.println("  Compilación exitosa.");
+            System.out.println("  Compilacion exitosa.");
+
+            // =========================================================
+            //  VISUALIZADOR GRÁFICO (Swing)
+            //
+            //  TreeViewer es la herramienta de depuración incluida en
+            //  ANTLR4. Abre una ventana Swing con el árbol de parseo
+            //  completo, interactivo y con zoom.
+            //
+            //  Se muestra DESPUÉS de la salida en consola para que
+            //  el alumno pueda leer primero la salida de texto.
+            // =========================================================
+
+            System.out.println("\n  Abriendo visualizador grafico del arbol...");
+            mostrarArbol(arbolParseo, parser);
 
         } catch (IOException e) {
             System.err.println("❌ No se pudo leer el archivo: " + e.getMessage());
@@ -211,5 +193,22 @@ public class App {
             System.err.println("❌ Error inesperado: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    // =========================================================
+    //  ÁRBOL VISUAL — métodos auxiliares
+    // =========================================================
+    private static void mostrarArbol(ParseTree tree, Parser parser) {
+        JFrame frame = new JFrame("Árbol Sintáctico");
+        JPanel panel = new JPanel();
+        TreeViewer viewer = new TreeViewer(Arrays.asList(parser.getRuleNames()), tree);
+        viewer.setScale(1.5);
+        panel.add(viewer);
+
+        JScrollPane scrollPane = new JScrollPane(panel);
+        frame.add(scrollPane);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(800, 600);
+        frame.setVisible(true);
     }
 }
