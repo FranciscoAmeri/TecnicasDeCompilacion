@@ -18,6 +18,7 @@ com\compilador\semantico\TypeSystem.class
 com\compilador\MiLenguajeParser$ExprFalsoContext.class
 com\compilador\ImprimirVisitor.class
 com\compilador\MiLenguajeParser$ExprNotContext.class
+com\compilador\semantico\SemanticError$Severidad.class
 com\compilador\App$1.class
 com\compilador\MiLenguajeParser$ExprNegativoContext.class
 com\compilador\MiLenguajeParser$TipoContext.class
@@ -27,6 +28,7 @@ com\compilador\MiLenguajeParser$ExprAgrupadaContext.class
 com\compilador\MiLenguajeParser$SentenciaContext.class
 com\compilador\App.class
 com\compilador\MiLenguajeParser$SentenciaCoutContext.class
+com\compilador\MiLenguajeParser$ExprLlamadaContext.class
 com\compilador\MiLenguajeParser$DeclaracionContext.class
 com\compilador\MiLenguajeParser$SentenciaIfContext.class
 com\compilador\MiLenguajeParser$ExpresionContext.class

@@ -1,36 +1,32 @@
 package com.compilador.semantico;
 
 /**
- * Representa una entrada en la tabla de símbolos.
+ * Un entrada en la tabla de símbolos: representa una variable, función o parámetro
+ * junto con su tipo, categoría, estado de inicialización y posición en el fuente.
  *
- * En este mini compilador, un símbolo es una VARIABLE declarada.
- * La clase está diseñada para ser extensible: la enumeración Categoria
- * permite agregar funciones y parámetros en el futuro.
- *
- * Información que guarda cada símbolo:
- *   - nombre      : el identificador ("x", "contador", "activo")
- *   - tipo        : el tipo de dato ("int", "float", "bool", etc.)
- *   - categoria   : qué tipo de símbolo es (variable, función, etc.)
- *   - inicializado: si ya se le asignó un valor
- *   - linea/columna: dónde fue declarado (para mensajes de error)
+ * El campo {@code inicializado} distingue una declaración bare ("int x;") de una
+ * con valor inicial ("int x = 10;").  Se cambia a true cuando el analizador visita
+ * una asignación posterior ("x = 10;").
  */
 public class Symbol {
 
-    // =========================================================
-    //  Categorías de símbolos
-    //  Actualmente solo VARIABLE está implementado.
-    //  FUNCION y PARAMETRO son extensiones futuras.
-    // =========================================================
+    /**
+     * Las tres clases de nombre que pueden aparecer en el lenguaje:
+     *   VARIABLE  — declarada con un tipo base (int, float, …)
+     *   FUNCION   — declarada con tipo de retorno y lista de parámetros
+     *   PARAMETRO — variable implícita creada al entrar a una función;
+     *               siempre se considera inicializada porque recibe valor al llamarla
+     */
     public enum Categoria {
         VARIABLE,
-        FUNCION,    // para extensión futura (cuando se agreguen funciones a la gramática)
-        PARAMETRO   // para extensión futura (parámetros de funciones)
+        FUNCION,
+        PARAMETRO
     }
 
     private final String    nombre;
     private final String    tipo;
     private final Categoria categoria;
-    private       boolean   inicializado; // puede cambiar después de la declaración
+    private       boolean   inicializado; // mutable: puede cambiar de false → true
     private final int       linea;
     private final int       columna;
 
@@ -44,29 +40,24 @@ public class Symbol {
         this.columna      = columna;
     }
 
-    // =========================================================
-    //  Factory methods (constructores con nombre descriptivo)
-    // =========================================================
+    // ── Fábricas estáticas ─────────────────────────────────────────────────
+    // Evitan repetir Categoria.X en cada lugar que crea un símbolo y dejan
+    // explícito qué valor tiene inicializado para cada categoría.
 
-    /** Crea un símbolo de tipo VARIABLE. */
-    public static Symbol variable(String nombre, String tipo,
-                                  boolean inicializado, int linea, int columna) {
+    /** Variable: puede nacer sin inicializar (int x;) o con valor (int x = 10;). */
+    public static Symbol variable(String nombre, String tipo, boolean inicializado, int linea, int columna) {
         return new Symbol(nombre, tipo, Categoria.VARIABLE, inicializado, linea, columna);
     }
 
-    /** Crea un símbolo de tipo FUNCION. El campo 'tipo' almacena el tipo de retorno. */
+    /** Función: siempre "inicializada" — el cuerpo es su definición. */
     public static Symbol funcion(String nombre, String tipoRetorno, int linea, int columna) {
         return new Symbol(nombre, tipoRetorno, Categoria.FUNCION, true, linea, columna);
     }
 
-    /** Crea un símbolo de tipo PARAMETRO. Los parámetros se consideran siempre inicializados. */
+    /** Parámetro: siempre "inicializado" — recibe valor en cada llamada. */
     public static Symbol parametro(String nombre, String tipo, int linea, int columna) {
         return new Symbol(nombre, tipo, Categoria.PARAMETRO, true, linea, columna);
     }
-
-    // =========================================================
-    //  Getters / Setters
-    // =========================================================
 
     public String    getNombre()      { return nombre;       }
     public String    getTipo()        { return tipo;         }
@@ -75,7 +66,7 @@ public class Symbol {
     public int       getLinea()       { return linea;        }
     public int       getColumna()     { return columna;      }
 
-    /** Marca el símbolo como inicializado (al hacer una asignación). */
+    /** Llamado por SemanticAnalyzer cuando visita una asignación a esta variable. */
     public void setInicializado(boolean inicializado) {
         this.inicializado = inicializado;
     }

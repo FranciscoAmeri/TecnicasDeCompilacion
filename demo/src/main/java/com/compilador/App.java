@@ -11,17 +11,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Punto de entrada del compilador educativo.
- *
- * Este programa realiza TRES fases del análisis:
- *   1. ANÁLISIS LÉXICO     — convierte el texto en tokens
- *   2. ANÁLISIS SINTÁCTICO — verifica la estructura (gramática)
- *   3. ANÁLISIS SEMÁNTICO  — verifica el significado (tipos, scopes)
- *
- * Para ejecutar:
- *   java -jar demo-1.0-jar-with-dependencies.jar <archivo.txt>
- */
 public class App {
 
     public static void main(String[] args) {
@@ -31,27 +20,13 @@ public class App {
         }
 
         try {
-            // Cargar el archivo de texto como un stream de caracteres
             CharStream input = CharStreams.fromFileName(args[0]);
             System.out.println("Analizando archivo: " + args[0]);
             System.out.println("=".repeat(65));
 
-            // =========================================================
-            //  FASE 1: ANÁLISIS LÉXICO
-            //
-            //  El Lexer lee los caracteres del archivo y los agrupa
-            //  en unidades con significado llamadas TOKENS.
-            //
-            //  Ejemplo:
-            //    "int x = 5 + 3 ;" → [INT] [ID:x] [IGUAL] [INTEGER:5]
-            //                          [SUM] [INTEGER:3] [PYC]
-            // =========================================================
-
+            // ── FASE 1: ANÁLISIS LÉXICO ──────────────────────────────────
             MiLenguajeLexer lexer = new MiLenguajeLexer(input);
 
-            // Reemplazamos el manejador de errores por defecto del lexer.
-            // Por defecto ANTLR imprime errores en System.err; aquí los
-            // capturamos para mostrarlos de forma más clara.
             List<String> erroresLexicos = new ArrayList<>();
             lexer.removeErrorListeners();
             lexer.addErrorListener(new BaseErrorListener() {
@@ -66,12 +41,9 @@ public class App {
                 }
             });
 
-            // fill() ejecuta el lexer y almacena TODOS los tokens en memoria.
-            // Esto nos permite mostrarlos y luego reutilizarlos para el parser.
             CommonTokenStream tokens = new CommonTokenStream(lexer);
             tokens.fill();
 
-            // Mostrar tabla de tokens
             System.out.println("\n=== FASE 1: ANÁLISIS LÉXICO ===\n");
             System.out.printf("  %-20s %-25s %-8s %-8s%n",
                               "TIPO DE TOKEN", "LEXEMA", "LÍNEA", "COLUMNA");
@@ -79,11 +51,8 @@ public class App {
 
             for (Token token : tokens.getTokens()) {
                 if (token.getType() == Token.EOF) continue;
-
                 String tipo = MiLenguajeLexer.VOCABULARY.getSymbolicName(token.getType());
-                // Si el tipo es null, probablemente es OTRO (char no reconocido)
                 if (tipo == null) tipo = "DESCONOCIDO";
-
                 System.out.printf("  %-20s %-25s %-8d %-8d%n",
                                   tipo,
                                   token.getText(),
@@ -91,49 +60,21 @@ public class App {
                                   token.getCharPositionInLine());
             }
 
-            // Si hubo errores léxicos, reportar y detener
             if (!erroresLexicos.isEmpty()) {
                 System.out.println("\n  ❌ ERRORES LÉXICOS:");
-                for (String error : erroresLexicos) {
-                    System.out.println(error);
-                }
+                for (String error : erroresLexicos) System.out.println(error);
                 System.out.println("\n  El análisis no puede continuar con errores léxicos.");
                 return;
             }
 
             System.out.println("\n  ✅ Análisis léxico completado sin errores.");
 
-            // =========================================================
-            //  FASE 2: ANÁLISIS SINTÁCTICO (PARSING)
-            //
-            //  El Parser recibe los tokens y verifica que forman
-            //  estructuras válidas según las REGLAS de la gramática.
-            //
-            //  Si la estructura es válida, construye un ÁRBOL DE PARSEO
-            //  (Parse Tree) que representa la jerarquía del programa.
-            //
-            //  Ejemplo para "int x = 5 + 3;":
-            //    programa
-            //      sentencia
-            //        declaracion
-            //          tipo: INT
-            //          ID: x
-            //          expresion
-            //            exprAditiva
-            //              exprEntero: 5
-            //              SUM
-            //              exprEntero: 3
-            // =========================================================
-
+            // ── FASE 2: ANÁLISIS SINTÁCTICO ──────────────────────────────
             System.out.println("\n=== FASE 2: ANÁLISIS SINTÁCTICO ===\n");
 
-            // El parser necesita leer los tokens desde el principio.
-            // reset() rebobina el stream al token 0.
             tokens.reset();
-
             MiLenguajeParser parser = new MiLenguajeParser(tokens);
 
-            // Capturar errores sintácticos de forma personalizada
             List<String> erroresSintacticos = new ArrayList<>();
             parser.removeErrorListeners();
             parser.addErrorListener(new BaseErrorListener() {
@@ -152,16 +93,11 @@ public class App {
                 }
             });
 
-            // Ejecutar el parser desde la REGLA INICIAL 'programa'.
-            // Esta llamada construye el árbol de parseo (o reporta errores).
             MiLenguajeParser.ProgramaContext arbolParseo = parser.programa();
 
-            // Verificar si hubo errores
             if (!erroresSintacticos.isEmpty()) {
                 System.out.println("  ❌ ERRORES SINTÁCTICOS:");
-                for (String error : erroresSintacticos) {
-                    System.out.println(error);
-                }
+                for (String error : erroresSintacticos) System.out.println(error);
                 System.out.println();
                 System.out.println("  Pista: revisa que cada sentencia:");
                 System.out.println("    - Termine con punto y coma ';'");
@@ -172,20 +108,7 @@ public class App {
 
             System.out.println("  ✅ Análisis sintáctico completado sin errores.");
 
-            // =========================================================
-            //  FASE 3: ANÁLISIS SEMÁNTICO
-            //
-            //  El analizador semántico recorre el árbol de parseo y
-            //  verifica que el programa tenga SENTIDO:
-            //    - Variables declaradas antes de usarse
-            //    - Tipos compatibles en asignaciones y expresiones
-            //    - Condiciones booleanas en if/while
-            //    - Sin redeclaraciones en el mismo scope
-            //
-            //  Los errores se ACUMULAN (no detienen el análisis),
-            //  permitiendo reportar múltiples errores en una sola pasada.
-            // =========================================================
-
+            // ── FASE 3: ANÁLISIS SEMÁNTICO ───────────────────────────────
             System.out.println("\n=== FASE 3: ANÁLISIS SEMÁNTICO ===\n");
 
             SemanticAnalyzer semantico = new SemanticAnalyzer();
@@ -198,20 +121,32 @@ public class App {
                     System.out.println("  " + error);
                 }
                 System.out.println();
-                // Mostrar tabla de símbolos igual, para ayudar a depurar
-                semantico.getTablaSimbolos().imprimirTabla();
-                System.out.println("\n" + "=".repeat(65));
-                System.out.println("  Compilacion finalizada con errores semanticos.");
-            } else {
-                System.out.println("  ✅ Análisis semántico completado sin errores.");
-                semantico.getTablaSimbolos().imprimirTabla();
-                System.out.println("\n" + "=".repeat(65));
-                System.out.println("  Compilacion exitosa.");
             }
 
-            // =========================================================
-            //  VISUALIZADOR GRÁFICO (Swing)
-            // =========================================================
+            if (semantico.hayAdvertencias()) {
+                System.out.println("  ⚠️  ADVERTENCIAS ("
+                                   + semantico.getAdvertencias().size() + "):\n");
+                for (SemanticError adv : semantico.getAdvertencias()) {
+                    System.out.println("  " + adv);
+                }
+                System.out.println();
+            }
+
+            semantico.getTablaSimbolos().imprimirTabla();
+            System.out.println("\n" + "=".repeat(65));
+
+            if (semantico.hayErrores()) {
+                System.out.println("  Compilacion finalizada con errores semanticos.");
+            } else if (semantico.hayAdvertencias()) {
+                System.out.println("  Compilacion exitosa con advertencias.");
+            } else {
+                System.out.println("  Compilacion exitosa.");
+            }
+            System.out.println(semantico.getErrores().size() + " error(es) semántico(s), "
+                               + semantico.getAdvertencias().size() + " advertencia(s).");
+            for (SemanticError error : semantico.getErrores()) {
+                System.out.println("  ❌ " + error);
+            }
 
             System.out.println("\n  Abriendo visualizador grafico del arbol...");
             mostrarArbol(arbolParseo, parser);
@@ -224,9 +159,6 @@ public class App {
         }
     }
 
-    // =========================================================
-    //  ÁRBOL VISUAL — métodos auxiliares
-    // =========================================================
     private static void mostrarArbol(ParseTree tree, Parser parser) {
         JFrame frame = new JFrame("Árbol Sintáctico");
         JPanel panel = new JPanel();

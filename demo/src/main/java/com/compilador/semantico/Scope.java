@@ -5,92 +5,76 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Representa un ÁMBITO (scope) en el programa.
+ * Representa un ámbito (scope): un espacio de nombres donde se declaran símbolos.
  *
- * ¿Qué es un scope?
- *   Un scope define dónde son visibles las variables.
- *   Cada par de llaves { } crea un nuevo scope.
+ * Los scopes forman una cadena de padres:
  *
- * Ejemplo:
- *   int x = 1;           // scope global
- *   {
- *       int y = 2;       // scope local — y solo existe aquí
- *       cout << x;       // x es visible (busca en el padre)
- *   }
- *   cout << y;           // ERROR: y ya no existe
+ *   global
+ *     └── funcion_suma_1
+ *           └── bloque_2
  *
- * Estructura de scopes:
- *   Los scopes forman un ÁRBOL donde cada scope tiene referencia
- *   a su padre. La búsqueda de un símbolo sube por el árbol:
- *
- *   [global]
- *     ├── [bloque_1]  (primer if)
- *     │     └── [bloque_2]  (bloque anidado)
- *     └── [bloque_3]  (while)
+ * Cada scope conoce a su padre pero no a sus hijos. La búsqueda de un nombre
+ * siempre va hacia arriba (hijo → padre → abuelo…) nunca hacia abajo.
  */
 public class Scope {
 
-    private final String              nombre;   // nombre descriptivo: "global", "bloque_1", etc.
-    private final Scope               padre;    // scope padre (null solo para el scope global)
-    private final Map<String, Symbol> simbolos; // símbolos declarados en ESTE scope
+    private final String              nombre;
+    private final Scope               padre;     // null solo en el scope global
+    // LinkedHashMap: acceso O(1) por nombre Y orden de inserción garantizado,
+    // así imprimirTabla() muestra los símbolos en el orden en que fueron declarados.
+    private final Map<String, Symbol> simbolos;
 
     public Scope(String nombre, Scope padre) {
         this.nombre   = nombre;
         this.padre    = padre;
-        this.simbolos = new LinkedHashMap<>(); // LinkedHashMap preserva el orden de inserción
+        this.simbolos = new LinkedHashMap<>();
     }
 
-    // =========================================================
-    //  Operaciones principales
-    // =========================================================
-
     /**
-     * Define un símbolo en ESTE scope.
+     * Agrega un símbolo a este scope.
+     * Retorna false si el nombre ya existe localmente (redeclaración).
      *
-     * @return true  → el símbolo se definió correctamente
-     * @return false → el símbolo ya estaba definido en este scope (redeclaración)
+     * Intencionalmente NO sube al padre: declarar "int x" dentro de un bloque
+     * cuando ya existe "int x" en global está permitido (shadowing).
+     * Solo es error redeclarar en el MISMO scope.
      */
     public boolean definir(Symbol simbolo) {
-        if (simbolos.containsKey(simbolo.getNombre())) {
-            return false; // redeclaración en el mismo scope → error semántico
-        }
+        if (simbolos.containsKey(simbolo.getNombre())) return false;
         simbolos.put(simbolo.getNombre(), simbolo);
         return true;
     }
 
     /**
-     * Resuelve un símbolo: busca primero en este scope, luego sube al padre.
+     * Busca un nombre empezando en este scope y subiendo por la cadena de padres.
      *
-     * Este es el mecanismo de LOOKUP en la cadena de scopes:
-     *   1. ¿Está en este scope? → retorna el símbolo
-     *   2. ¿Tiene padre? → busca recursivamente
-     *   3. Llegó al global sin encontrar → retorna null (no declarado)
+     * Ejemplo con el programa:
+     *   int x = 10;               ← declarado en "global"
+     *   int suma(int a, int b) {
+     *       return a + x;         ← busca "x" en "funcion_suma_1", no lo encuentra,
+     *   }                            sube a "global", lo encuentra → ok
      *
-     * @return el Symbol encontrado, o null si no existe en ningún scope
+     * Si ningún scope en la cadena lo tiene, retorna null → variable no declarada.
      */
     public Symbol resolver(String nombre) {
-        Symbol s = simbolos.get(nombre);
+        Symbol s = simbolos.get(nombre);       // 1. buscar en este scope
         if (s != null) return s;
-        if (padre != null) return padre.resolver(nombre);
-        return null;
+        if (padre != null) return padre.resolver(nombre);  // 2. subir al padre
+        return null;                           // 3. llegamos al global y no está
     }
 
     /**
-     * Verifica si un nombre está definido SOLO en este scope (sin buscar en padres).
-     * Usado para detectar redeclaraciones en el mismo ámbito.
+     * Busca el nombre SOLO en este scope, sin subir al padre.
+     * Se usa para detectar redeclaraciones: está bien tener "int x" en global
+     * y también "int x" dentro de un if, porque son scopes distintos.
      */
     public boolean estaDefinidoLocalmente(String nombre) {
         return simbolos.containsKey(nombre);
     }
 
-    // =========================================================
-    //  Getters
-    // =========================================================
-
-    public String              getNombre()   { return nombre;             }
-    public Scope               getPadre()    { return padre;              }
-    public Collection<Symbol>  getSimbolos() { return simbolos.values();  }
-    public boolean             esGlobal()    { return padre == null;      }
+    public String             getNombre()   { return nombre;            }
+    public Scope              getPadre()    { return padre;             }
+    public Collection<Symbol> getSimbolos() { return simbolos.values(); }
+    public boolean            esGlobal()    { return padre == null;     }
 
     @Override
     public String toString() {
