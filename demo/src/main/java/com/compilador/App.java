@@ -5,6 +5,7 @@ import org.antlr.v4.runtime.tree.*;
 import org.antlr.v4.gui.TreeViewer;
 import com.compilador.semantico.SemanticAnalyzer;
 import com.compilador.semantico.SemanticError;
+import com.compilador.codigoIntermedio.CodigoTresDir;
 import javax.swing.*;
 import java.util.Arrays;
 import java.io.IOException;
@@ -146,6 +147,16 @@ public class App {
                                + semantico.getAdvertencias().size() + " advertencia(s).");
             for (SemanticError error : semantico.getErrores()) {
                 System.out.println("  ❌ " + error);
+            }
+
+            // ── FASE 4: CÓDIGO DE TRES DIRECCIONES ───────────────────────
+            if (!semantico.hayErrores()) {
+                CodigoTresDir generador = new CodigoTresDir();
+                generador.visit(arbolParseo);
+                generador.imprimir();
+                System.out.println("\n" + "=".repeat(65));
+            } else {
+                System.out.println("\n  (Fase 4 omitida por errores semánticos.)");
             }
 
             System.out.println("\n  Abriendo visualizador grafico del arbol...");
